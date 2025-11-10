@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Payslip;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +14,7 @@ class FetchRedditPosts extends Command
      *
      * @var string
      */
-    protected $signature = 'reddit:fetch-posts {--limit=10 : Antal posts der skal hentes}';
+    protected $signature = 'reddit:fetch-posts {--limit=10 : Antal posts der skal hentes} {--save : Gem posts til databasen}';
 
     /**
      * The console command description.
@@ -28,6 +29,7 @@ class FetchRedditPosts extends Command
     public function handle(): int
     {
         $limit = $this->option('limit');
+        $save = $this->option('save');
         
         $this->info("Henter de seneste {$limit} posts fra r/dkloenseddel...");
 
@@ -53,6 +55,8 @@ class FetchRedditPosts extends Command
             }
 
             $this->info("Fandt {$this->count($posts)} posts:\n");
+
+            $savedCount = 0;
 
             foreach ($posts as $index => $item) {
                 $post = $item['data'];
@@ -95,16 +99,70 @@ class FetchRedditPosts extends Command
                         $post['url']
                     ));
                 }
+
+                // Gem til database hvis --save flag er sat
+                if ($save) {
+                    try {
+                        $payslip = Payslip::updateOrCreate(
+                            [
+                                'url' => 'https://reddit.com' . $post['permalink'],
+                            ],
+                            [
+                                'title' => $post['title'],
+                                'description' => $post['selftext'] ?? null,
+                                'source' => 'reddit',
+                            ]
+                        );
+                        
+                        $savedCount++;
+                        $this->line("   <fg=green>✓ Gemt til database (ID: {$payslip->id})</>");
+
+                        // Download og gem billede hvis det findes og ikke allerede er gemt
+                        if (!empty($post['url_overridden_by_dest'])) {
+                            $imageUrl = $post['url_overridden_by_dest'];
+                            
+                            // Tjek om det er et billede (reddit billeder eller imgur)
+                            if ($this->isImageUrl($imageUrl)) {
+                                // Tjek om billedet allerede er downloadet
+                                $existingMedia = $payslip->getMedia('documents')
+                                    ->first(function ($media) use ($imageUrl) {
+                                        return $media->getCustomProperty('source_url') === $imageUrl;
+                                    });
+
+                                if ($existingMedia) {
+                                    $this->line("   <fg=gray>ℹ Billede allerede gemt</>");
+                                } else {
+                                    try {
+                                        $payslip->addMediaFromUrl($imageUrl)
+                                            ->withCustomProperties(['source_url' => $imageUrl])
+                                            ->toMediaCollection('documents');
+                                        
+                                        $this->line("   <fg=green>✓ Billede downloadet og gemt</>");
+                                    } catch (\Exception $e) {
+                                        $this->line("   <fg=yellow>⚠ Kunne ikke downloade billede: {$e->getMessage()}</>");
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        $this->line("   <fg=red>✗ Kunne ikke gemme: {$e->getMessage()}</>");
+                    }
+                }
             }
 
             $this->newLine();
             $this->info('✓ Posts hentet succesfuldt');
+
+            if ($save && $savedCount > 0) {
+                $this->info("✓ {$savedCount} posts gemt til databasen");
+            }
 
             // Log til Laravel log
             Log::info('Reddit posts hentet', [
                 'subreddit' => 'dkloenseddel',
                 'count' => count($posts),
                 'limit' => $limit,
+                'saved' => $savedCount ?? 0,
             ]);
 
             return Command::SUCCESS;
@@ -128,6 +186,26 @@ class FetchRedditPosts extends Command
     private function count(array $posts): int
     {
         return count($posts);
+    }
+
+    /**
+     * Check if URL points to an image
+     */
+    private function isImageUrl(string $url): bool
+    {
+        // Tjek om URL'en ender med et billede filtype
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+        $extension = strtolower(pathinfo(parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
+        
+        if (in_array($extension, $imageExtensions)) {
+            return true;
+        }
+        
+        // Tjek om det er fra Reddit eller Imgur billede domæner
+        $imageDomains = ['i.redd.it', 'i.imgur.com', 'imgur.com'];
+        $host = parse_url($url, PHP_URL_HOST);
+        
+        return in_array($host, $imageDomains);
     }
 }
 

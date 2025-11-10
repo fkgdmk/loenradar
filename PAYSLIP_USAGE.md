@@ -11,6 +11,10 @@ Payslip modellen bruges til at gemme lønsedler og relateret information. Modell
 - `url` (string, nullable) - Link til kilde
 - `job_titel` (string, nullable) - Job titel
 - `source` (string, nullable) - Kilde (fx 'reddit', 'manual', etc.)
+- `uploaded_at` (timestamp, nullable) - Hvornår lønsedlen blev uploadet til den originale platform (fx Reddit)
+- `salary` (decimal, nullable) - Grundløn/basisløn i DKK uden tillæg (ekstrakt via OpenAI)
+- `verified_at` (timestamp, nullable) - Hvornår lønsedlen blev verificeret manuelt
+- `experience` (integer, nullable) - Antal års erhvervserfaring
 - `timestamps` - Laravel timestamps (created_at, updated_at)
 
 ## 💾 Opret en Payslip
@@ -25,6 +29,8 @@ $payslip = Payslip::create([
     'url' => 'https://reddit.com/r/dkloenseddel/post123',
     'job_titel' => 'Software Engineer',
     'source' => 'reddit',
+    'salary' => 45000.00,
+    'experience' => 3, // 3 års erfaring
 ]);
 
 // Eller med updateOrCreate (undgå dubletter)
@@ -95,6 +101,24 @@ $document->delete();
 $payslip->clearMediaCollection('documents');
 ```
 
+## ✅ Verificering
+
+```php
+// Marker som verificeret
+$payslip->markAsVerified();
+
+// Fjern verificering
+$payslip->unverify();
+
+// Tjek om verificeret
+if ($payslip->isVerified()) {
+    echo "Denne lønseddel er verificeret";
+}
+
+// Manuel verificering med tidspunkt
+$payslip->update(['verified_at' => now()]);
+```
+
 ## 🔍 Query Eksempler
 
 ```php
@@ -112,6 +136,15 @@ $latest = Payslip::latest()->take(10)->get();
 
 // Med eager loading af media
 $payslips = Payslip::with('media')->get();
+
+// Find kun verificerede payslips
+$verified = Payslip::whereNotNull('verified_at')->get();
+
+// Find uverificerede payslips
+$unverified = Payslip::whereNull('verified_at')->get();
+
+// Find payslips verificeret i dag
+$todayVerified = Payslip::whereDate('verified_at', today())->get();
 ```
 
 ## 🎯 Controller Eksempel
@@ -172,6 +205,8 @@ class PayslipController extends Controller
 
 Hent posts fra Reddit og gem dem til databasen:
 
+### Standard Mode (Enkelt Request)
+
 ```bash
 # Hent og vis posts (gem IKKE)
 php artisan reddit:fetch-posts
@@ -182,6 +217,31 @@ php artisan reddit:fetch-posts --save
 # Hent de sidste 25 posts og gem dem
 php artisan reddit:fetch-posts --limit=25 --save
 ```
+
+### Bulk Import Mode (Med Pagination)
+
+```bash
+# Hent de sidste 1000 posts med pagination
+php artisan reddit:fetch-posts --bulk --save
+
+# Hent et custom antal (max ~1000 pga Reddit begrænsning)
+php artisan reddit:fetch-posts --bulk --save --bulk-limit=500
+
+# Juster rate limiting delay (standard 2 sekunder)
+php artisan reddit:fetch-posts --bulk --save --delay=3
+
+# Kun preview uden at gemme
+php artisan reddit:fetch-posts --bulk
+```
+
+**Bulk Import Features:**
+- ✅ Automatisk pagination gennem Reddit API
+- ✅ Rate limiting (2 sek mellem requests som standard)
+- ✅ Real-time statistik og progress
+- ✅ Håndterer Reddit's 'after' parameter
+- ✅ Respekterer API begrænsninger (max ~1000 posts)
+- ✅ Automatisk billede download
+- ✅ Duplikat beskyttelse
 
 ## 📚 Spatie Media Library Features
 

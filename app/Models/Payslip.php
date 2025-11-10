@@ -21,6 +21,20 @@ class Payslip extends Model implements HasMedia
         'url',
         'job_titel',
         'source',
+        'uploaded_at',
+        'salary',
+        'verified_at',
+        'experience',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'uploaded_at' => 'datetime',
+        'verified_at' => 'datetime',
     ];
 
     /**
@@ -30,5 +44,31 @@ class Payslip extends Model implements HasMedia
     {
         $this->addMediaCollection('documents')
             ->useDisk('public');
+    }
+
+    /**
+     * Marker payslip som verificeret
+     */
+    public function markAsVerified(): self
+    {
+        $this->update(['verified_at' => now()]);
+        return $this;
+    }
+
+    /**
+     * Fjern verificering
+     */
+    public function unverify(): self
+    {
+        $this->update(['verified_at' => null]);
+        return $this;
+    }
+
+    /**
+     * Tjek om payslip er verificeret
+     */
+    public function isVerified(): bool
+    {
+        return $this->verified_at !== null;
     }
 }

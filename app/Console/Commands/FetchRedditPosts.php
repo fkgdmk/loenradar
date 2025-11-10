@@ -11,10 +11,15 @@ class FetchRedditPosts extends Command
 {
     /**
      * The name and signature of the console command.
-     *
+     *  
      * @var string
      */
-    protected $signature = 'reddit:fetch-posts {--limit=10 : Antal posts der skal hentes} {--save : Gem posts til databasen}';
+    protected $signature = 'reddit:fetch-posts 
+                            {--limit=10 : Antal posts der skal hentes} 
+                            {--save : Gem posts til databasen}
+                            {--bulk : Hent posts i bulk med pagination (ignorer limit)}
+                            {--bulk-limit=1000 : Antal posts ved bulk import}
+                            {--delay=2 : Sekunder mellem requests (rate limiting)}';
 
     /**
      * The console command description.
@@ -28,9 +33,16 @@ class FetchRedditPosts extends Command
      */
     public function handle(): int
     {
-        $limit = $this->option('limit');
+        $bulk = $this->option('bulk');
         $save = $this->option('save');
-        
+        $delay = (int) $this->option('delay');
+
+        if ($bulk) {
+            return $this->handleBulkImport($save, $delay);
+        }
+
+        // Standard enkelt request
+        $limit = $this->option('limit');
         $this->info("Henter de seneste {$limit} posts fra r/dkloenseddel...");
 
         try {
@@ -73,10 +85,15 @@ class FetchRedditPosts extends Command
                     $post['score'],
                     $post['num_comments']
                 ));
-                $this->line(sprintf(
-                    "   <fg=gray>Oprettet:</> %s",
-                    date('Y-m-d H:i:s', $post['created_utc'])
-                ));
+                
+                if (isset($post['created_utc'])) {
+                    $uploadedAt = \Carbon\Carbon::createFromTimestamp($post['created_utc']);
+                    $this->line(sprintf(
+                        "   <fg=gray>Uploadet:</> %s (%s)",
+                        $uploadedAt->format('Y-m-d H:i:s'),
+                        $uploadedAt->diffForHumans()
+                    ));
+                }
                 $this->line(sprintf(
                     "   <fg=gray>URL:</> https://reddit.com%s",
                     $post['permalink']
@@ -111,6 +128,9 @@ class FetchRedditPosts extends Command
                                 'title' => $post['title'],
                                 'description' => $post['selftext'] ?? null,
                                 'source' => 'reddit',
+                                'uploaded_at' => isset($post['created_utc']) 
+                                    ? \Carbon\Carbon::createFromTimestamp($post['created_utc'])
+                                    : null,
                             ]
                         );
                         
@@ -178,6 +198,188 @@ class FetchRedditPosts extends Command
 
             return Command::FAILURE;
         }
+    }
+
+    /**
+     * Handle bulk import with pagination
+     */
+    private function handleBulkImport(bool $save, int $delay): int
+    {
+        $bulkLimit = (int) $this->option('bulk-limit');
+        $perPage = 100; // Reddit max per request
+        
+        $this->info("🚀 Bulk import: Henter op til {$bulkLimit} posts fra r/dkloenseddel");
+        $this->info("Rate limiting: {$delay} sekunder mellem requests\n");
+
+        if (!$save) {
+            $this->warn('⚠️  Advarsel: --save flag er ikke sat. Posts bliver IKKE gemt til databasen!');
+            $this->newLine();
+        }
+
+        $totalFetched = 0;
+        $totalSaved = 0;
+        $totalImages = 0;
+        $after = null;
+        $page = 1;
+
+        try {
+            while ($totalFetched < $bulkLimit) {
+                $this->info("📄 Side {$page} - Henter...");
+
+                $response = Http::withHeaders([
+                    'User-Agent' => config('services.reddit.user_agent', 'Laravel/1.0'),
+                ])->get('https://www.reddit.com/r/dkloenseddel.json', [
+                    'limit' => min($perPage, $bulkLimit - $totalFetched),
+                    'after' => $after,
+                ]);
+
+                if ($response->failed()) {
+                    $this->error("Fejl ved hentning af side {$page}: Status {$response->status()}");
+                    break;
+                }
+
+                $data = $response->json();
+                $posts = $data['data']['children'] ?? [];
+                $after = $data['data']['after'] ?? null;
+
+                if (empty($posts)) {
+                    $this->warn('Ingen flere posts fundet');
+                    break;
+                }
+
+                $this->info("   Fandt " . count($posts) . " posts");
+
+                // Process posts
+                foreach ($posts as $item) {
+                    $result = $this->processPost($item['data'], $save);
+                    
+                    if ($result['saved']) {
+                        $totalSaved++;
+                    }
+                    if ($result['image_downloaded']) {
+                        $totalImages++;
+                    }
+                }
+
+                $totalFetched += count($posts);
+                $this->info("   ✓ Processeret: {$totalFetched}/{$bulkLimit} posts");
+
+                // Stop hvis der ikke er flere sider
+                if ($after === null) {
+                    $this->info('📭 Ingen flere posts tilgængelige');
+                    break;
+                }
+
+                // Rate limiting - vent mellem requests
+                if ($totalFetched < $bulkLimit && $after !== null) {
+                    $this->info("   ⏳ Venter {$delay} sekunder (rate limiting)...\n");
+                    sleep($delay);
+                }
+
+                $page++;
+            }
+
+            $this->newLine();
+            $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            $this->info("✅ Bulk import afsluttet!");
+            $this->info("📊 Statistik:");
+            $this->info("   • Posts hentet: {$totalFetched}");
+            if ($save) {
+                $this->info("   • Posts gemt: {$totalSaved}");
+                $this->info("   • Billeder downloadet: {$totalImages}");
+            }
+            $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+            Log::info('Reddit bulk import afsluttet', [
+                'total_fetched' => $totalFetched,
+                'total_saved' => $totalSaved,
+                'total_images' => $totalImages,
+                'pages' => $page,
+            ]);
+
+            return Command::SUCCESS;
+
+        } catch (\Exception $e) {
+            $this->error('Der opstod en kritisk fejl under bulk import');
+            $this->error($e->getMessage());
+            
+            Log::error('Fejl ved bulk import', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return Command::FAILURE;
+        }
+    }
+
+    /**
+     * Process a single post
+     */
+    private function processPost(array $post, bool $save): array
+    {
+        $result = [
+            'saved' => false,
+            'image_downloaded' => false,
+        ];
+
+        if (!$save) {
+            return $result;
+        }
+
+        try {
+            $payslip = Payslip::updateOrCreate(
+                [
+                    'url' => 'https://reddit.com' . $post['permalink'],
+                ],
+                [
+                    'title' => $post['title'],
+                    'description' => $post['selftext'] ?? null,
+                    'source' => 'reddit',
+                    'uploaded_at' => isset($post['created_utc']) 
+                        ? \Carbon\Carbon::createFromTimestamp($post['created_utc'])
+                        : null,
+                ]
+            );
+            
+            $result['saved'] = true;
+
+            // Download og gem billede hvis det findes og ikke allerede er gemt
+            if (!empty($post['url_overridden_by_dest'])) {
+                $imageUrl = $post['url_overridden_by_dest'];
+                
+                // Tjek om det er et billede (reddit billeder eller imgur)
+                if ($this->isImageUrl($imageUrl)) {
+                    // Tjek om billedet allerede er downloadet
+                    $existingMedia = $payslip->getMedia('documents')
+                        ->first(function ($media) use ($imageUrl) {
+                            return $media->getCustomProperty('source_url') === $imageUrl;
+                        });
+
+                    if (!$existingMedia) {
+                        try {
+                            $payslip->addMediaFromUrl($imageUrl)
+                                ->withCustomProperties(['source_url' => $imageUrl])
+                                ->toMediaCollection('documents');
+                            
+                            $result['image_downloaded'] = true;
+                        } catch (\Exception $e) {
+                            // Ignorér billede fejl i bulk mode
+                            Log::warning('Kunne ikke downloade billede', [
+                                'url' => $imageUrl,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Kunne ikke gemme post', [
+                'title' => $post['title'] ?? 'unknown',
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $result;
     }
 
     /**

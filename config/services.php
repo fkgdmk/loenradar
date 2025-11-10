@@ -41,4 +41,15 @@ return [
         'client_secret' => env('REDDIT_CLIENT_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | OpenAI Configuration
+    |--------------------------------------------------------------------------
+    |
+    | OpenAI API bruges til at analysere lønsedler med Vision API.
+    | Konfiguration findes i config/openai.php
+    | Set OPENAI_API_KEY i .env filen
+    |
+    */
+
 ];

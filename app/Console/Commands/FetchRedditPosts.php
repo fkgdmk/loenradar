@@ -131,6 +131,7 @@ class FetchRedditPosts extends Command
                                 'uploaded_at' => isset($post['created_utc']) 
                                     ? \Carbon\Carbon::createFromTimestamp($post['created_utc'])
                                     : null,
+                                // job_title_id opdateres via payslips:extract-job-titles command
                             ]
                         );
                         
@@ -338,6 +339,7 @@ class FetchRedditPosts extends Command
                     'uploaded_at' => isset($post['created_utc']) 
                         ? \Carbon\Carbon::createFromTimestamp($post['created_utc'])
                         : null,
+                    // job_title_id opdateres via payslips:extract-job-titles command
                 ]
             );
             

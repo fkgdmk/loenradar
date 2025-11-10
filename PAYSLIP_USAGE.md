@@ -145,6 +145,18 @@ $unverified = Payslip::whereNull('verified_at')->get();
 
 // Find payslips verificeret i dag
 $todayVerified = Payslip::whereDate('verified_at', today())->get();
+
+// Find payslips med specifik erfaring
+$juniorDevelopers = Payslip::where('experience', '<=', 2)->get();
+$seniorDevelopers = Payslip::where('experience', '>=', 5)->get();
+
+// Gennemsnitsløn per erfaringsniveau
+$avgSalaryByExperience = Payslip::whereNotNull('salary')
+    ->whereNotNull('experience')
+    ->selectRaw('experience, AVG(salary) as avg_salary, COUNT(*) as count')
+    ->groupBy('experience')
+    ->orderBy('experience')
+    ->get();
 ```
 
 ## 🎯 Controller Eksempel

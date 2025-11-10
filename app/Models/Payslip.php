@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -19,7 +20,8 @@ class Payslip extends Model implements HasMedia
         'title',
         'description',
         'url',
-        'job_titel',
+        'job_title_id',
+        'sub_job_title',
         'source',
         'uploaded_at',
         'salary',
@@ -70,5 +72,13 @@ class Payslip extends Model implements HasMedia
     public function isVerified(): bool
     {
         return $this->verified_at !== null;
+    }
+
+    /**
+     * Get the job title for this payslip
+     */
+    public function jobTitle(): BelongsTo
+    {
+        return $this->belongsTo(JobTitle::class, 'job_title_id');
     }
 }

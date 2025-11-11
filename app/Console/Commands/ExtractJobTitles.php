@@ -41,7 +41,7 @@ class ExtractJobTitles extends Command
         $this->newLine();
 
         // Byg query
-        $query = Payslip::query();
+        $query = Payslip::whereNull('job_title_id');
 
         if ($specificId) {
             $query->where('id', $specificId);
@@ -95,17 +95,33 @@ class ExtractJobTitles extends Command
 
         foreach ($payslips as $payslip) {
             try {
-                $jobTitel = $extractor->extractJobTitle($payslip);
+                $extractedData = $extractor->extractJobTitle($payslip);
 
-                if ($jobTitel) {
+                $this->line("✓ Payslip #{$payslip->id}: {$payslip->title}");
+
+                if ($extractedData) {
                     $successCount++;
                     $this->newLine();
-                    $this->line("✓ Payslip #{$payslip->id}: {$payslip->title}");
-                    $this->line("  Job titel: {$jobTitel->name}");
+                    $this->line("  Job titel: {$extractedData['job_title']->name}");
+                    
+                    if ($extractedData['sub_job_title']) {
+                        $this->line("  Sub titel: {$extractedData['sub_job_title']}");
+                    }
+                    
+                    if ($extractedData['experience']) {
+                        $this->line("  Erfaring: {$extractedData['experience']} år");
+                    }
+                    
+                    // Opdater payslip med alle ekstraherede felter
+                    $payslip->update([
+                        'job_title_id' => $extractedData['job_title']->id,
+                        'sub_job_title' => $extractedData['sub_job_title'] !== null && $extractedData['sub_job_title'] !== 'null' ? $extractedData['sub_job_title'] : null,
+                        'experience' => $extractedData['experience'],
+                    ]);
                 } else {
                     $failCount++;
                     $this->newLine();
-                    $this->line("⚠ Payslip #{$payslip->id}: Kunne ikke ekstrahere job titel");
+                    $this->line("⚠ Kunne ikke ekstrahere job titel");
                 }
 
             } catch (\Exception $e) {

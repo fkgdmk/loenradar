@@ -19,8 +19,11 @@ class Payslip extends Model implements HasMedia
     protected $fillable = [
         'title',
         'description',
+        'comments',
         'url',
         'job_title_id',
+        'area_of_responsibility_id',
+        'region_id',
         'sub_job_title',
         'source',
         'uploaded_at',
@@ -37,6 +40,7 @@ class Payslip extends Model implements HasMedia
     protected $casts = [
         'uploaded_at' => 'datetime',
         'verified_at' => 'datetime',
+        'comments' => 'array',
     ];
 
     /**
@@ -80,5 +84,21 @@ class Payslip extends Model implements HasMedia
     public function jobTitle(): BelongsTo
     {
         return $this->belongsTo(JobTitle::class, 'job_title_id');
+    }
+
+    /**
+     * Get the area of responsibility for this payslip
+     */
+    public function areaOfResponsibility(): BelongsTo
+    {
+        return $this->belongsTo(AreaOfResponsibility::class, 'area_of_responsibility_id');
+    }
+
+    /**
+     * Get the region for this payslip
+     */
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class, 'region_id');
     }
 }

@@ -41,7 +41,7 @@ class AnalyzePayslips extends Command
         $this->newLine();
 
         // Byg query
-        $query = Payslip::whereNull('verified_at')->has('media');
+        $query = Payslip::whereNull('verified_at')->whereNotNull('job_title_id')->has('media');
 
         if ($specificId) {
             $query->where('id', $specificId);
@@ -57,7 +57,7 @@ class AnalyzePayslips extends Command
         $payslips = $query->get();
 
         if ($payslips->isEmpty()) {
-            $this->warn('Ingen payslips fundet med billeder' . (!$force ? ' uden løn' : ''));
+            $this->warn('Ingen payslips fundet med job titel og billeder' . (!$force ? ' uden løn' : ''));
             return Command::SUCCESS;
         }
 

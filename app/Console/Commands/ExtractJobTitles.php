@@ -18,6 +18,7 @@ class ExtractJobTitles extends Command
                             {--limit= : Antal payslips der skal processeres}
                             {--force : Genekstrahér job titler der allerede har en}
                             {--id= : Ekstrahér kun et specifikt payslip ID}
+                            {--after-date= : Kun payslips oprettet efter denne dato (YYYY-MM-DD)}
                             {--estimate : Vis kun omkostningsestimat}';
 
     /**
@@ -35,20 +36,33 @@ class ExtractJobTitles extends Command
         $limit = $this->option('limit');
         $force = $this->option('force');
         $specificId = $this->option('id');
-        $estimate = $this->option('estimate');
+            $afterDate = $this->option('after-date');
+            $estimate = $this->option('estimate');
 
-        $this->info('🔍 Ekstraherer job titler fra payslips med OpenAI...');
-        $this->newLine();
+            $this->info('🔍 Ekstraherer job titler fra payslips med OpenAI...');
+            $this->newLine();
 
-        // Byg query
-        $query = Payslip::whereNull('job_title_id');
+            // Byg query
+            $query = Payslip::whereNull('job_title_id')->has('media');
 
-        if ($specificId) {
-            $query->where('id', $specificId);
-        } elseif (!$force) {
-            // Kun payslips uden job titel
-            $query->whereNull('job_title_id');
-        }
+            if ($specificId) {
+                $query->where('id', $specificId);
+            } elseif (!$force) {
+                // Kun payslips uden job titel
+                $query->whereNull('job_title_id');
+            }
+
+            // Filtrer efter dato hvis angivet
+            if ($afterDate) {
+                try {
+                    $date = \Carbon\Carbon::parse($afterDate);
+                    $query->where('created_at', '>=', $date);
+                    $this->info("📅 Filtrerer payslips oprettet efter: {$date->format('Y-m-d H:i:s')}");
+                } catch (\Exception $e) {
+                    $this->error("Ugyldig dato format: {$afterDate}. Brug YYYY-MM-DD");
+                    return Command::FAILURE;
+                }
+            }
 
         // Kun payslips med titel eller beskrivelse
         $query->where(function ($q) {
@@ -112,11 +126,21 @@ class ExtractJobTitles extends Command
                         $this->line("  Erfaring: {$extractedData['experience']} år");
                     }
                     
+                    if ($extractedData['area_of_responsibility']) {
+                        $this->line("  Ansvarsområde: {$extractedData['area_of_responsibility']->name}");
+                    }
+                    
+                    if ($extractedData['region']) {
+                        $this->line("  Region: {$extractedData['region']->name}");
+                    }
+                    
                     // Opdater payslip med alle ekstraherede felter
                     $payslip->update([
                         'job_title_id' => $extractedData['job_title']->id,
                         'sub_job_title' => $extractedData['sub_job_title'] !== null && $extractedData['sub_job_title'] !== 'null' ? $extractedData['sub_job_title'] : null,
                         'experience' => $extractedData['experience'],
+                        'area_of_responsibility_id' => $extractedData['area_of_responsibility']?->id,
+                        'region_id' => $extractedData['region']?->id,
                     ]);
                 } else {
                     $failCount++;

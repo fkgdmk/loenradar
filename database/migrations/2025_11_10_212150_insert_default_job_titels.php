@@ -61,6 +61,9 @@ return new class extends Migration
             'Product Manager',
             'Afdelingsleder',
             'HR Chef',
+            'IT-Systemkonsulent',
+            'Manager',
+            'Teamleder / Team Lead'
         ];
 
         $now = now();
@@ -121,6 +124,9 @@ return new class extends Migration
             'Product Manager',
             'Afdelingsleder',
             'HR Chef',
+            'IT-Systemkonsulent',
+            'Manager',
+            'Teamleder / Team Lead'
         ];
 
         DB::table('job_titles')->whereIn('name', $jobTitles)->delete();

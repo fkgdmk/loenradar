@@ -19,7 +19,7 @@ class FetchRedditPosts extends Command
                             {--save : Gem posts til databasen}
                             {--bulk : Hent posts i bulk med pagination (ignorer limit)}
                             {--bulk-limit=1000 : Antal posts ved bulk import}
-                            {--delay=2 : Sekunder mellem requests (rate limiting)}';
+                            {--delay=5 : Sekunder mellem requests (rate limiting)}';
 
     /**
      * The console command description.
@@ -120,6 +120,9 @@ class FetchRedditPosts extends Command
                 // Gem til database hvis --save flag er sat
                 if ($save) {
                     try {
+                        // Hent forfatterens kommentarer
+                        $authorComments = $this->fetchAuthorComments($post);
+
                         $payslip = Payslip::updateOrCreate(
                             [
                                 'url' => 'https://reddit.com' . $post['permalink'],
@@ -127,6 +130,7 @@ class FetchRedditPosts extends Command
                             [
                                 'title' => $post['title'],
                                 'description' => $post['selftext'] ?? null,
+                                'comments' => $authorComments,
                                 'source' => 'reddit',
                                 'uploaded_at' => isset($post['created_utc']) 
                                     ? \Carbon\Carbon::createFromTimestamp($post['created_utc'])
@@ -328,6 +332,9 @@ class FetchRedditPosts extends Command
         }
 
         try {
+            // Hent forfatterens kommentarer
+            $authorComments = $this->fetchAuthorComments($post);
+
             $payslip = Payslip::updateOrCreate(
                 [
                     'url' => 'https://reddit.com' . $post['permalink'],
@@ -335,6 +342,7 @@ class FetchRedditPosts extends Command
                 [
                     'title' => $post['title'],
                     'description' => $post['selftext'] ?? null,
+                    'comments' => $authorComments,
                     'source' => 'reddit',
                     'uploaded_at' => isset($post['created_utc']) 
                         ? \Carbon\Carbon::createFromTimestamp($post['created_utc'])
@@ -410,6 +418,86 @@ class FetchRedditPosts extends Command
         $host = parse_url($url, PHP_URL_HOST);
         
         return in_array($host, $imageDomains);
+    }
+
+    /**
+     * Fetch author comments from a Reddit post
+     */
+    private function fetchAuthorComments(array $post): ?array
+    {
+        try {
+            // Hent post ID fra permalink
+            $permalink = $post['permalink'];
+            $author = $post['author'];
+
+            // Kald Reddit API for at hente kommentarer
+            $response = Http::withHeaders([
+                'User-Agent' => config('services.reddit.user_agent', 'Laravel/1.0'),
+            ])->get("https://www.reddit.com{$permalink}.json");
+
+            if ($response->failed()) {
+                Log::warning('Kunne ikke hente kommentarer fra Reddit', [
+                    'permalink' => $permalink,
+                    'status' => $response->status(),
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            
+            // Reddit API returnerer et array med 2 elementer:
+            // [0] = post data, [1] = comments data
+            if (!isset($data[1]['data']['children'])) {
+                return null;
+            }
+
+            $comments = [];
+            
+            // Gennemgå alle kommentarer rekursivt
+            $this->extractAuthorComments($data[1]['data']['children'], $author, $comments);
+
+            if (empty($comments)) {
+                return null;
+            }
+
+            // Returner kommentarerne som array
+            return $comments;
+
+        } catch (\Exception $e) {
+            Log::warning('Fejl ved hentning af forfatterens kommentarer', [
+                'error' => $e->getMessage(),
+                'post_title' => $post['title'] ?? 'unknown',
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Recursively extract author comments from comment tree
+     */
+    private function extractAuthorComments(array $children, string $author, array &$comments): void
+    {
+        foreach ($children as $child) {
+            // Spring over hvis det ikke er en kommentar
+            if (!isset($child['data']) || $child['kind'] !== 't1') {
+                continue;
+            }
+
+            $commentData = $child['data'];
+
+            // Tjek om kommentaren er fra forfatteren
+            if (isset($commentData['author']) && $commentData['author'] === $author) {
+                // Tilføj kommentarteksten
+                if (!empty($commentData['body'])) {
+                    $comments[] = $commentData['body'];
+                }
+            }
+
+            // Gennemgå svar rekursivt
+            if (isset($commentData['replies']['data']['children'])) {
+                $this->extractAuthorComments($commentData['replies']['data']['children'], $author, $comments);
+            }
+        }
     }
 }
 

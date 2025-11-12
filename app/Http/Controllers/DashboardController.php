@@ -22,13 +22,20 @@ class DashboardController extends Controller
             ->count();
 
         // Antal unikke jobtitler der har payslips
-        $jobTitlesCount = JobTitle::has('payslips')->count();
+        $jobTitlesCount = JobTitle::whereHas('payslips', function ($query) {
+            $query->whereNotNull('verified_at');
+        })->count();
 
         // Antal unikke regioner der har payslips
-        $regionsCount = Region::has('payslips')->count();
+        $regionsCount = Region::whereHas('payslips', function ($query) {
+            $query->whereNotNull('verified_at');
+        })->count();
 
         // Hent jobtitler med counts (sorteret efter antal payslips)
         $jobTitlesWithCounts = JobTitle::withCount('payslips')
+            ->whereHas('payslips', function ($query) {
+                $query->whereNotNull('verified_at');
+            })
             ->having('payslips_count', '>', 0)
             ->orderBy('payslips_count', 'desc')
             ->get()
@@ -41,6 +48,9 @@ class DashboardController extends Controller
 
         // Hent regioner med counts (sorteret efter antal payslips)
         $regionsWithCounts = Region::withCount('payslips')
+            ->whereHas('payslips', function ($query) {
+                $query->whereNotNull('verified_at');
+            })
             ->having('payslips_count', '>', 0)
             ->orderBy('payslips_count', 'desc')
             ->get()

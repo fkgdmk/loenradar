@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Log;
 class FetchRedditPosts extends Command
 {
     /**
+     * OAuth access token cache
+     */
+    private ?string $accessToken = null;
+
+    /**
      * The name and signature of the console command.
      *  
      * @var string
@@ -46,11 +51,12 @@ class FetchRedditPosts extends Command
         $this->info("Henter de seneste {$limit} posts fra r/dkloenseddel...");
 
         try {
-            $response = Http::withHeaders([
-                'User-Agent' => config('services.reddit.user_agent', 'Laravel/1.0'),
-            ])->get('https://www.reddit.com/r/dkloenseddel.json', [
-                'limit' => $limit,
-            ]);
+            $response = $this->makeAuthenticatedRequest(
+                'https://oauth.reddit.com/r/dkloenseddel',
+                ['limit' => $limit]
+            );
+
+            $this->handleRateLimit($response);
 
             if ($response->failed()) {
                 $this->error('Kunne ikke hente posts fra Reddit API');
@@ -206,6 +212,71 @@ class FetchRedditPosts extends Command
     }
 
     /**
+     * Get OAuth access token
+     */
+    private function getAccessToken(): string
+    {
+        if ($this->accessToken !== null) {
+            return $this->accessToken;
+        }
+
+        try {
+            $response = Http::asForm()
+                ->withBasicAuth(
+                    config('services.reddit.client_id'),
+                    config('services.reddit.client_secret')
+                )
+                ->post('https://www.reddit.com/api/v1/access_token', [
+                    'grant_type' => 'client_credentials',
+                ]);
+
+            if ($response->failed()) {
+                throw new \Exception("Kunne ikke hente OAuth token: " . $response->status());
+            }
+
+            $data = $response->json();
+            $this->accessToken = $data['access_token'];
+
+            $this->info("🔐 OAuth token hentet succesfuldt");
+
+            return $this->accessToken;
+        } catch (\Exception $e) {
+            $this->error("Fejl ved OAuth authentication: {$e->getMessage()}");
+            throw $e;
+        }
+    }
+
+    /**
+     * Make authenticated API request
+     */
+    private function makeAuthenticatedRequest(string $url, array $params = []): \Illuminate\Http\Client\Response
+    {
+        $token = $this->getAccessToken();
+        return Http::withHeaders([
+            'User-Agent' => config('services.reddit.user_agent'),
+            'Authorization' => "Bearer {$token}",
+        ])->get($url, $params);
+    }
+
+    /**
+     * Check and handle rate limits
+     */
+    private function handleRateLimit(\Illuminate\Http\Client\Response $response): void
+    {
+        $remaining = $response->header('X-Ratelimit-Remaining');
+        $reset = $response->header('X-Ratelimit-Reset');
+        
+        if ($remaining !== null && (int)$remaining < 10) {
+            $this->warn("⚠️  Rate limit: Kun {$remaining} requests tilbage");
+            if ($reset !== null) {
+                $waitTime = (int)$reset;
+                $this->info("   Venter {$waitTime} sekunder før reset...");
+                sleep($waitTime);
+            }
+        }
+    }
+
+    /**
      * Handle bulk import with pagination
      */
     private function handleBulkImport(bool $save, int $delay): int
@@ -231,12 +302,15 @@ class FetchRedditPosts extends Command
             while ($totalFetched < $bulkLimit) {
                 $this->info("📄 Side {$page} - Henter...");
 
-                $response = Http::withHeaders([
-                    'User-Agent' => config('services.reddit.user_agent', 'Laravel/1.0'),
-                ])->get('https://www.reddit.com/r/dkloenseddel.json', [
-                    'limit' => min($perPage, $bulkLimit - $totalFetched),
-                    'after' => $after,
-                ]);
+                $response = $this->makeAuthenticatedRequest(
+                    'https://oauth.reddit.com/r/dkloenseddel',
+                    [
+                        'limit' => min($perPage, $bulkLimit - $totalFetched),
+                        'after' => $after,
+                    ]
+                );
+
+                $this->handleRateLimit($response);
 
                 if ($response->failed()) {
                     $this->error("Fejl ved hentning af side {$page}: Status {$response->status()}");
@@ -431,9 +505,9 @@ class FetchRedditPosts extends Command
             $author = $post['author'];
 
             // Kald Reddit API for at hente kommentarer
-            $response = Http::withHeaders([
-                'User-Agent' => config('services.reddit.user_agent', 'Laravel/1.0'),
-            ])->get("https://www.reddit.com{$permalink}.json");
+            $response = $this->makeAuthenticatedRequest("https://oauth.reddit.com{$permalink}");
+
+            $this->handleRateLimit($response);
 
             if ($response->failed()) {
                 Log::warning('Kunne ikke hente kommentarer fra Reddit', [

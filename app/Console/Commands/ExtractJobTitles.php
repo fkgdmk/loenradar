@@ -43,14 +43,14 @@ class ExtractJobTitles extends Command
             $this->newLine();
 
             // Byg query
-            $query = Payslip::whereNull('job_title_id')->has('media');
+            $query = Payslip::whereNull('job_title_id')->whereNull('denied_at')->has('media');
 
             if ($specificId) {
                 $query->where('id', $specificId);
             } elseif (!$force) {
                 // Kun payslips uden job titel
                 $query->whereNull('job_title_id');
-            }
+            } 
 
             // Filtrer efter dato hvis angivet
             if ($afterDate) {
@@ -143,6 +143,9 @@ class ExtractJobTitles extends Command
                         'region_id' => $extractedData['region']?->id,
                     ]);
                 } else {
+                    $payslip->update([
+                        'denied_at' => now(),
+                    ]);
                     $failCount++;
                     $this->newLine();
                     $this->line("⚠ Kunne ikke ekstrahere job titel");

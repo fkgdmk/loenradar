@@ -64,7 +64,15 @@ return new class extends Migration
             'IT-Systemkonsulent',
             'Manager',
             'Teamleder / Team Lead',
-            'Director'
+            'Director',
+            'Finans analytiker',
+            'UX/UI Designer',
+            'Adm. Direktør (CEO)',
+            'Økonomi Direktør (CFO)',
+            'Teknisk Direktør (CTO)',
+            'Drift Direktør (COO)',
+            'Driftleder',
+            'IT-Konsulent'
         ];
 
         $now = now();
@@ -128,7 +136,15 @@ return new class extends Migration
             'IT-Systemkonsulent',
             'Manager',
             'Teamleder / Team Lead',
-            'Director'
+            'Director',
+            'Finans analytiker',
+            'UX/UI Designer',
+            'Adm. Direktør (CEO)',
+            'Økonomi Direktør (CFO)',
+            'Teknisk Direktør (CTO)',
+            'Drift Direktør (COO)',
+            'Driftleder',
+            'IT-Konsulent'
         ];
 
         DB::table('job_titles')->whereIn('name', $jobTitles)->delete();

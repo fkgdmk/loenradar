@@ -17,6 +17,7 @@ return new class extends Migration
             'HR & Administration',
             'Produktion & Logistik',
             'Kundeservice & Support',
+            'Pharma & Medicinal',
             'Andet',
         ];
 
@@ -43,6 +44,7 @@ return new class extends Migration
             'HR & Administration',
             'Produktion & Logistik',
             'Kundeservice & Support',
+            'Pharma & Medicinal',
             'Andet',
         ];
 

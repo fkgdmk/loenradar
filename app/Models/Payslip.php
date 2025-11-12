@@ -29,6 +29,7 @@ class Payslip extends Model implements HasMedia
         'uploaded_at',
         'salary',
         'verified_at',
+        'denied_at',
         'experience',
     ];
 
@@ -40,6 +41,7 @@ class Payslip extends Model implements HasMedia
     protected $casts = [
         'uploaded_at' => 'datetime',
         'verified_at' => 'datetime',
+        'denied_at' => 'datetime',
         'comments' => 'array',
     ];
 
@@ -76,6 +78,23 @@ class Payslip extends Model implements HasMedia
     public function isVerified(): bool
     {
         return $this->verified_at !== null;
+    }
+
+    /**
+     * Marker payslip som afvist
+     */
+    public function markAsDenied(): self
+    {
+        $this->update(['denied_at' => now()]);
+        return $this;
+    }
+
+    /**
+     * Tjek om payslip er afvist
+     */
+    public function isDenied(): bool
+    {
+        return $this->denied_at !== null;
     }
 
     /**

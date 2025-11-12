@@ -63,7 +63,8 @@ return new class extends Migration
             'HR Chef',
             'IT-Systemkonsulent',
             'Manager',
-            'Teamleder / Team Lead'
+            'Teamleder / Team Lead',
+            'Director'
         ];
 
         $now = now();
@@ -126,7 +127,8 @@ return new class extends Migration
             'HR Chef',
             'IT-Systemkonsulent',
             'Manager',
-            'Teamleder / Team Lead'
+            'Teamleder / Team Lead',
+            'Director'
         ];
 
         DB::table('job_titles')->whereIn('name', $jobTitles)->delete();

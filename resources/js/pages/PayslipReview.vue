@@ -246,7 +246,7 @@ const handleDeny = () => {
                 </Card>
             </div>
 
-            <div v-else class="grid gap-4 lg:grid-cols-3">
+            <div v-else class="grid gap-4" :class="{ 'lg:grid-cols-3': payslip.media_url }">
                 <!-- Billede - 2/3 af bredden -->
                 <Card class="lg:col-span-2">
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -286,7 +286,7 @@ const handleDeny = () => {
                             </Dialog>
                         </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent v-if="payslip.media_url">
                         <img 
                             :src="payslip.media_url" 
                             :alt="payslip.title || 'Payslip'" 

@@ -41,9 +41,12 @@ class ExtractJobTitles extends Command
 
             $this->info('🔍 Ekstraherer job titler fra payslips med OpenAI...');
             $this->newLine();
-
+        
             // Byg query
-            $query = Payslip::whereNull('job_title_id')->whereNull('denied_at')->has('media');
+            $query = Payslip::whereNull('job_title_id')
+                ->whereNull('denied_at')
+                ->whereNotNull('description')
+                ->whereNotNull('title');
 
             if ($specificId) {
                 $query->where('id', $specificId);
@@ -64,11 +67,6 @@ class ExtractJobTitles extends Command
                 }
             }
 
-        // Kun payslips med titel eller beskrivelse
-        $query->where(function ($q) {
-            $q->whereNotNull('title')
-              ->orWhereNotNull('description');
-        });
 
         if ($limit) {
             $query->limit((int) $limit);

@@ -17,6 +17,7 @@ class DashboardController extends Controller
     {
         // Antal verificerede payslips (med job_title_id, salary og verified_at)
         $verifiedPayslipsCount = Payslip::whereNotNull('verified_at')
+            ->has('media')
             ->whereNotNull('job_title_id')
             ->whereNotNull('salary')
             ->count();
@@ -27,24 +28,46 @@ class DashboardController extends Controller
         })->count();
 
         // Antal unikke regioner der har payslips
-        $regionsCount = Region::whereHas('payslips', function ($query) {
-            $query->whereNotNull('verified_at');
-        })->count();
+        $salaryDataPointsCount = Payslip::whereNotNull('verified_at')
+            ->whereNotNull('job_title_id')
+            ->whereNotNull('salary')
+            ->count();
 
         // Hent jobtitler med counts (sorteret efter antal payslips)
-        $jobTitlesWithCounts = JobTitle::withCount('payslips')
-            ->whereHas('payslips', function ($query) {
-                $query->whereNotNull('verified_at');
+        $jobTitlesWithCounts = JobTitle::whereHas('payslips', function ($query) {
+                $query->whereNotNull('verified_at')
+                    ->whereNotNull('job_title_id')
+                    ->whereNotNull('salary');
             })
-            ->having('payslips_count', '>', 0)
-            ->orderBy('payslips_count', 'desc')
             ->get()
             ->map(function ($jobTitle) {
+                // Tæl løndatapunkter (med verified_at, job_title_id og salary)
+                $salaryDataPointsCount = $jobTitle->payslips()
+                    ->whereNotNull('verified_at')
+                    ->whereNotNull('job_title_id')
+                    ->whereNotNull('salary')
+                    ->count();
+
+                // Tæl verificerede lønseddeler (med verified_at, media, job_title_id og salary)
+                $verifiedPayslipsCount = $jobTitle->payslips()
+                    ->whereNotNull('verified_at')
+                    ->whereNotNull('job_title_id')
+                    ->whereNotNull('salary')
+                    ->has('media')
+                    ->count();
+
                 return [
                     'name' => $jobTitle->name,
-                    'count' => $jobTitle->payslips_count,
+                    'count' => $salaryDataPointsCount, // Behold eksisterende count for bagudkompatibilitet
+                    'salaryDataPoints' => $salaryDataPointsCount,
+                    'verifiedPayslips' => $verifiedPayslipsCount,
                 ];
-            });
+            })
+            ->filter(function ($jobTitle) {
+                return $jobTitle['salaryDataPoints'] > 0;
+            })
+            ->sortByDesc('salaryDataPoints')
+            ->values();
 
         // Hent regioner med counts (sorteret efter antal payslips)
         $regionsWithCounts = Region::withCount('payslips')
@@ -65,7 +88,7 @@ class DashboardController extends Controller
             'statistics' => [
                 'verifiedPayslips' => $verifiedPayslipsCount,
                 'jobTitles' => $jobTitlesCount,
-                'regions' => $regionsCount,
+                'salaryDataPoints' => $salaryDataPointsCount,
             ],
             'jobTitles' => $jobTitlesWithCounts,
             'regions' => $regionsWithCounts,

@@ -72,7 +72,9 @@ return new class extends Migration
             'Teknisk Direktør (CTO)',
             'Drift Direktør (COO)',
             'Driftleder',
-            'IT-Konsulent'
+            'IT-Konsulent',
+            'Maskinmester',
+            'IT-Arkitekt'
         ];
 
         $now = now();
@@ -144,7 +146,9 @@ return new class extends Migration
             'Teknisk Direktør (CTO)',
             'Drift Direktør (COO)',
             'Driftleder',
-            'IT-Konsulent'
+            'IT-Konsulent',
+            'Maskinmester',
+            'IT-Arkitekt'
         ];
 
         DB::table('job_titles')->whereIn('name', $jobTitles)->delete();

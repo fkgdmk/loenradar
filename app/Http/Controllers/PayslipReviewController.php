@@ -28,7 +28,6 @@ class PayslipReviewController extends Controller
                 ->whereNotNull('salary')
                 ->whereNull('verified_at')
                 ->whereNull('denied_at')
-                ->has('media')
                 ->with(['jobTitle', 'areaOfResponsibility', 'region', 'media'])
                 ->first();
         }
@@ -38,7 +37,6 @@ class PayslipReviewController extends Controller
             ->whereNotNull('salary')
             ->whereNull('verified_at')
             ->whereNull('denied_at')
-            ->has('media')
             ->count();
 
         // Hent alle job titles, regions og areas of responsibility til dropdowns

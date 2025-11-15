@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import PayslipReviewController from '@/actions/App/Http/Controllers/PayslipReviewController';
 import { dashboard } from '@/routes';
 import { ref } from 'vue';
-import { MessageSquare, Maximize2, ExternalLink, Pencil, Check, X } from 'lucide-vue-next';
+import { MessageSquare, Maximize2, ExternalLink, Pencil, Check, X, Upload } from 'lucide-vue-next';
 
 interface PayslipData {
     id: number;
@@ -80,6 +80,11 @@ const salaryInput = ref('');
 const jobTitleInput = ref<number | null>(null);
 const regionInput = ref<number | null>(null);
 const areaOfResponsibilityInput = ref<number | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+const uploadForm = useForm({
+    document: null as File | null,
+});
 
 const startEditingExperience = () => {
     experienceInput.value = props.payslip?.experience || '';
@@ -107,7 +112,7 @@ const saveExperience = () => {
 };
 
 const startEditingSalary = () => {
-    salaryInput.value = props.payslip?.salary.toString() || '';
+    salaryInput.value = props.payslip?.salary?.toString() || '';
     isEditingSalary.value = true;
 };
 
@@ -221,6 +226,69 @@ const handleDeny = () => {
         preserveScroll: true,
     });
 };
+
+const handleUploadClick = () => {
+    fileInputRef.value?.click();
+};
+
+const handleFileChange = (event: Event) => {
+    if (!props.payslip) return;
+    
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    
+    if (!file) return;
+    
+    // Valider filtype
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        alert('Ugyldig filtype. Kun PDF og billeder (JPG, PNG, WEBP) er tilladt.');
+        // Reset file input
+        if (fileInputRef.value) {
+            fileInputRef.value.value = '';
+        }
+        return;
+    }
+    
+    // Valider filstørrelse (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('Filen er for stor. Maksimal størrelse er 10MB.');
+        // Reset file input
+        if (fileInputRef.value) {
+            fileInputRef.value.value = '';
+        }
+        return;
+    }
+    
+    // Sæt filen i formen
+    uploadForm.document = file;
+    
+    // Upload filen
+    uploadForm.post(`/payslips/${props.payslip.id}/document`, {
+        preserveScroll: true,
+        preserveState: true,
+        forceFormData: true,
+        onSuccess: () => {
+            uploadForm.reset();
+            // Reset file input
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
+        },
+        onError: (errors) => {
+            // Reset file input
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
+            // Vis fejlbeskeder
+            if (errors.document) {
+                alert(Array.isArray(errors.document) ? errors.document[0] : errors.document);
+            } else {
+                alert('Der opstod en fejl ved upload af filen.');
+            }
+        },
+    });
+};
 </script>
 
 <template>
@@ -252,6 +320,22 @@ const handleDeny = () => {
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle>Dokument</CardTitle>
                         <div class="flex gap-2">
+                            <input
+                                ref="fileInputRef"
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                class="hidden"
+                                @change="handleFileChange"
+                            />
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                :disabled="uploadForm.processing"
+                                @click="handleUploadClick"
+                            >
+                                <Upload class="h-4 w-4 mr-2" />
+                                {{ uploadForm.processing ? 'Uploader...' : 'Upload' }}
+                            </Button>
                             <Button 
                                 v-if="payslip.url" 
                                 variant="outline" 
@@ -323,7 +407,7 @@ const handleDeny = () => {
                                 </Button>
                             </div>
                             <div v-if="!isEditingSalary" class="mt-1">
-                                <p class="text-xl font-semibold">{{ payslip.salary.toLocaleString('da-DK') }} kr.</p>
+                                <p class="text-xl font-semibold">{{ payslip.salary?.toLocaleString('da-DK') }} kr.</p>
                             </div>
                             <div v-else class="mt-1 flex gap-2">
                                 <Input 

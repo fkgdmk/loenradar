@@ -39,7 +39,7 @@ class AnalyzePayslips extends Command
         $this->newLine();
 
         // Byg query
-        $query = Payslip::whereNull('verified_at')->whereNotNull('job_title_id')->has('media');
+        $query = Payslip::whereNull('verified_at')->whereNull('denied_at')->whereNotNull('job_title_id')->has('media');
 
         if ($specificId) {
             $query->where('id', $specificId);

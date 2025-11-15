@@ -179,4 +179,24 @@ class PayslipReviewController extends Controller
 
         return redirect()->route('payslips.review.index', ['payslip' => $payslip->id]);
     }
+
+    /**
+     * Upload dokument til payslip
+     */
+    public function uploadDocument(Request $request, Payslip $payslip)
+    {
+        $validated = $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240', // 10MB max
+        ]);
+
+        // Fjern eksisterende dokumenter hvis der er nogen
+        $payslip->clearMediaCollection('documents');
+
+        // Tilføj nyt dokument
+        $payslip->addMediaFromRequest('document')
+            ->toMediaCollection('documents');
+
+        return redirect()->route('payslips.review.index', ['payslip' => $payslip->id])
+            ->with('success', 'Dokument uploadet succesfuldt');
+    }
 }

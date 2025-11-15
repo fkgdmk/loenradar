@@ -20,6 +20,7 @@ class FetchRedditPosts extends Command
      * @var string
      */
     protected $signature = 'reddit:fetch-posts 
+                            {url? : URL til et specifikt Reddit post (fx https://www.reddit.com/r/dkloenseddel/comments/1i4z2bs/...)}
                             {--limit=10 : Antal posts der skal hentes} 
                             {--save : Gem posts til databasen}
                             {--bulk : Hent posts i bulk med pagination (ignorer limit)}
@@ -31,13 +32,20 @@ class FetchRedditPosts extends Command
      *
      * @var string
      */
-    protected $description = 'Hent de seneste posts fra r/dkloenseddel';
+    protected $description = 'Hent de seneste posts fra r/dkloenseddel eller et specifikt post via URL';
 
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
+        $url = $this->argument('url');
+        
+        // Hvis URL er angivet, hent kun det specifikke post
+        if ($url) {
+            return $this->handleSinglePost($url);
+        }
+
         $bulk = $this->option('bulk');
         $save = $this->option('save');
         $delay = (int) $this->option('delay');
@@ -274,6 +282,217 @@ class FetchRedditPosts extends Command
                 sleep($waitTime);
             }
         }
+    }
+
+    /**
+     * Handle fetching a single Reddit post by URL
+     */
+    private function handleSinglePost(string $url): int
+    {
+        $save = $this->option('save');
+        
+        $this->info("Henter specifikt Reddit post fra: {$url}");
+        
+        try {
+            // Parse URL to extract subreddit and post ID
+            $parsed = $this->parseRedditUrl($url);
+            
+            if (!$parsed) {
+                $this->error('Ugyldig Reddit URL. Format skal være: https://www.reddit.com/r/{subreddit}/comments/{post_id}/...');
+                return Command::FAILURE;
+            }
+            
+            $subreddit = $parsed['subreddit'];
+            $postId = $parsed['post_id'];
+            
+            $this->info("Subreddit: r/{$subreddit}, Post ID: {$postId}");
+            
+            // Fetch the specific post
+            // Reddit API returns array: [0] = post, [1] = comments
+            $apiUrl = "https://oauth.reddit.com/r/{$subreddit}/comments/{$postId}/";
+            $response = $this->makeAuthenticatedRequest($apiUrl);
+            
+            $this->handleRateLimit($response);
+            
+            if ($response->failed()) {
+                $this->error('Kunne ikke hente post fra Reddit API');
+                $this->error("Status: {$response->status()}");
+                return Command::FAILURE;
+            }
+            
+            $data = $response->json();
+            
+            // Reddit API returnerer et array med 2 elementer:
+            // [0] = post data, [1] = comments data
+            if (!isset($data[0]['data']['children'][0]['data'])) {
+                $this->error('Post ikke fundet');
+                return Command::FAILURE;
+            }
+            
+            $post = $data[0]['data']['children'][0]['data'];
+            
+            $this->line('─────────────────────────────────────────────────────');
+            $this->line(sprintf(
+                "<fg=cyan>%s</>",
+                $post['title']
+            ));
+            $this->line(sprintf(
+                "   <fg=gray>Forfatter:</> %s | <fg=gray>Score:</> %d | <fg=gray>Kommentarer:</> %d",
+                $post['author'],
+                $post['score'],
+                $post['num_comments']
+            ));
+            
+            if (isset($post['created_utc'])) {
+                $uploadedAt = \Carbon\Carbon::createFromTimestamp($post['created_utc']);
+                $this->line(sprintf(
+                    "   <fg=gray>Uploadet:</> %s (%s)",
+                    $uploadedAt->format('Y-m-d H:i:s'),
+                    $uploadedAt->diffForHumans()
+                ));
+            }
+            $this->line(sprintf(
+                "   <fg=gray>URL:</> https://reddit.com%s",
+                $post['permalink']
+            ));
+            
+            if (!empty($post['selftext'])) {
+                $preview = mb_substr($post['selftext'], 0, 100);
+                if (mb_strlen($post['selftext']) > 100) {
+                    $preview .= '...';
+                }
+                $this->line(sprintf(
+                    "   <fg=gray>Tekst:</> %s",
+                    $preview
+                ));
+            }
+
+            if (!empty($post['url']) && !str_contains($post['url'], 'reddit.com')) {
+                $this->line(sprintf(
+                    "   <fg=gray>Link:</> %s",
+                    $post['url']
+                ));
+            }
+
+            // Gem til database hvis --save flag er sat
+            if ($save) {
+                try {
+                    // Hent forfatterens kommentarer (data[1] indeholder kommentarer)
+                    $authorComments = $this->fetchAuthorCommentsFromData($post, $data[1] ?? null);
+
+                    $payslip = Payslip::updateOrCreate(
+                        [
+                            'url' => 'https://reddit.com' . $post['permalink'],
+                        ],
+                        [
+                            'title' => $post['title'],
+                            'description' => $post['selftext'] ?? null,
+                            'comments' => $authorComments,
+                            'source' => 'reddit',
+                            'uploaded_at' => isset($post['created_utc']) 
+                                ? \Carbon\Carbon::createFromTimestamp($post['created_utc'])
+                                : null,
+                            // job_title_id opdateres via payslips:extract-job-titles command
+                        ]
+                    );
+                    
+                    $this->line("   <fg=green>✓ Gemt til database (ID: {$payslip->id})</>");
+
+                    // Download og gem billede hvis det findes og ikke allerede er gemt
+                    if (!empty($post['url_overridden_by_dest'])) {
+                        $imageUrl = $post['url_overridden_by_dest'];
+                        
+                        // Tjek om det er et billede (reddit billeder eller imgur)
+                        if ($this->isImageUrl($imageUrl)) {
+                            // Tjek om billedet allerede er downloadet
+                            $existingMedia = $payslip->getMedia('documents')
+                                ->first(function ($media) use ($imageUrl) {
+                                    return $media->getCustomProperty('source_url') === $imageUrl;
+                                });
+
+                            if ($existingMedia) {
+                                $this->line("   <fg=gray>ℹ Billede allerede gemt</>");
+                            } else {
+                                try {
+                                    $payslip->addMediaFromUrl($imageUrl)
+                                        ->withCustomProperties(['source_url' => $imageUrl])
+                                        ->toMediaCollection('documents');
+                                    
+                                    $this->line("   <fg=green>✓ Billede downloadet og gemt</>");
+                                } catch (\Exception $e) {
+                                    $this->line("   <fg=yellow>⚠ Kunne ikke downloade billede: {$e->getMessage()}</>");
+                                }
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $this->line("   <fg=red>✗ Kunne ikke gemme: {$e->getMessage()}</>");
+                }
+            }
+
+            $this->newLine();
+            $this->info('✓ Post hentet succesfuldt');
+
+            Log::info('Reddit post hentet via URL', [
+                'url' => $url,
+                'subreddit' => $subreddit,
+                'post_id' => $postId,
+                'saved' => $save ? 1 : 0,
+            ]);
+
+            return Command::SUCCESS;
+
+        } catch (\Exception $e) {
+            $this->error('Der opstod en fejl ved hentning af Reddit post');
+            $this->error($e->getMessage());
+            
+            Log::error('Fejl ved hentning af Reddit post via URL', [
+                'url' => $url,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return Command::FAILURE;
+        }
+    }
+
+    /**
+     * Parse Reddit URL to extract subreddit and post ID
+     */
+    private function parseRedditUrl(string $url): ?array
+    {
+        // Remove .json suffix if present
+        $url = preg_replace('/\.json$/', '', $url);
+        
+        // Pattern: https://www.reddit.com/r/{subreddit}/comments/{post_id}/...
+        $pattern = '#https?://(?:www\.)?reddit\.com/r/([^/]+)/comments/([^/]+)#';
+        
+        if (preg_match($pattern, $url, $matches)) {
+            return [
+                'subreddit' => $matches[1],
+                'post_id' => $matches[2],
+            ];
+        }
+        
+        return null;
+    }
+
+    /**
+     * Fetch author comments from already fetched data
+     */
+    private function fetchAuthorCommentsFromData(array $post, ?array $commentsData): ?array
+    {
+        if (!$commentsData || !isset($commentsData['data']['children'])) {
+            return null;
+        }
+
+        $author = $post['author'];
+        $comments = [];
+        
+        // Gennemgå alle kommentarer rekursivt
+        $this->extractAuthorComments($commentsData['data']['children'], $author, $comments);
+
+        return empty($comments) ? null : $comments;
     }
 
     /**

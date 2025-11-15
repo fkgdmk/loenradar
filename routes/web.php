@@ -23,6 +23,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/payslips/{payslip}/region', [App\Http\Controllers\PayslipReviewController::class, 'updateRegion'])->name('payslips.review.updateRegion');
     Route::patch('/payslips/{payslip}/salary', [App\Http\Controllers\PayslipReviewController::class, 'updateSalary'])->name('payslips.review.updateSalary');
     Route::patch('/payslips/{payslip}/area-of-responsibility', [App\Http\Controllers\PayslipReviewController::class, 'updateAreaOfResponsibility'])->name('payslips.review.updateAreaOfResponsibility');
+    Route::post('/payslips/{payslip}/document', [App\Http\Controllers\PayslipReviewController::class, 'uploadDocument'])->name('payslips.review.uploadDocument');
 });
 
 require __DIR__.'/settings.php';

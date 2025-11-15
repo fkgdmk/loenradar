@@ -74,7 +74,8 @@ return new class extends Migration
             'Driftleder',
             'IT-Konsulent',
             'Maskinmester',
-            'IT-Arkitekt'
+            'IT-Arkitekt',
+            'Tech Lead'
         ];
 
         $now = now();
@@ -148,7 +149,8 @@ return new class extends Migration
             'Driftleder',
             'IT-Konsulent',
             'Maskinmester',
-            'IT-Arkitekt'
+            'IT-Arkitekt',
+            'Tech Lead'
         ];
 
         DB::table('job_titles')->whereIn('name', $jobTitles)->delete();

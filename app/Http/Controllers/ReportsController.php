@@ -175,10 +175,12 @@ class ReportsController extends Controller
             'region_id' => 'required|exists:regions,id',
         ]);
 
-        // Normaliser gender til at have caps på første bogstav
+        // Normaliser gender til at have caps på første bogstav, eller null hvis tom
         $gender = $validated['gender'] ?? null;
-        if ($gender) {
-            $gender = ucfirst(strtolower($gender));
+        if ($gender && trim($gender) !== '') {
+            $gender = ucfirst(strtolower(trim($gender)));
+        } else {
+            $gender = null;
         }
 
         DB::beginTransaction();
@@ -243,10 +245,12 @@ class ReportsController extends Controller
             'region_id' => 'required|exists:regions,id',
         ]);
 
-        // Normaliser gender til at have caps på første bogstav
+        // Normaliser gender til at have caps på første bogstav, eller null hvis tom
         $gender = $validated['gender'] ?? null;
-        if ($gender) {
-            $gender = ucfirst(strtolower($gender));
+        if ($gender && trim($gender) !== '') {
+            $gender = ucfirst(strtolower(trim($gender)));
+        } else {
+            $gender = null;
         }
 
         DB::beginTransaction();

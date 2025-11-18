@@ -130,13 +130,18 @@ const regionSearch = ref('');
 const responsibilityLevelSearch = ref('');
 const skillSearch = ref('');
 
+// Normaliser gender ved initialisering
+const initialGender = props.report?.gender && props.report.gender.trim() !== '' 
+    ? props.report.gender 
+    : null;
+
 const form = useForm({
     // Step 1
     document: null as File | null,
     job_title_id: props.report?.job_title_id ?? null as number | null,
     area_of_responsibility_id: props.report?.area_of_responsibility_id ?? null as number | null,
     experience: props.report?.experience ?? null as number | null,
-    gender: props.report?.gender ?? null as string | null,
+    gender: initialGender as string | null,
     region_id: props.report?.region_id ?? null as number | null,
     
     // Step 2
@@ -307,23 +312,29 @@ const toggleSkill = (skillId: number) => {
 
 const nextStep = async () => {
     if (currentStep.value === 1 && canProceedToStep2.value) {
+        // Normaliser gender: konverter tom streng til null
+        const normalizedGender = form.gender && form.gender.trim() !== '' ? form.gender : null;
+        
         // Hvis der allerede er en report, opdater step 1 data
         if (reportId.value) {
             const step1Form = useForm({
                 job_title_id: form.job_title_id,
                 area_of_responsibility_id: form.area_of_responsibility_id,
                 experience: form.experience,
-                gender: form.gender,
+                gender: normalizedGender,
                 region_id: form.region_id,
             });
 
             step1Form.patch(`/reports/${reportId.value}/step1`, {
                 preserveScroll: false,
                 onSuccess: () => {
-                    // Inertia vil automatisk reload siden med den opdaterede report data
+                    // Gå til step 2 efter succesfuld opdatering
+                    currentStep.value = 2;
                 },
                 onError: (errors: any) => {
                     console.error('Fejl ved opdatering:', errors);
+                    console.log('Valideringsfejl:', errors.errors);
+                    alert('Der opstod en fejl ved opdatering. Tjek venligst alle felter og prøv igen.');
                 },
             });
             return;
@@ -335,7 +346,7 @@ const nextStep = async () => {
             job_title_id: form.job_title_id,
             area_of_responsibility_id: form.area_of_responsibility_id,
             experience: form.experience,
-            gender: form.gender,
+            gender: normalizedGender,
             region_id: form.region_id,
         });
 
@@ -344,11 +355,12 @@ const nextStep = async () => {
             preserveScroll: false,
             onSuccess: () => {
                 // Inertia vil automatisk reload siden med den nye URL og report data
-                // currentStep vil blive sat automatisk baseret på report.step fra props
+                // Watch på props.report vil automatisk opdatere step til 2 når data er klar
             },
             onError: (errors: any) => {
                 console.error('Fejl ved gemning:', errors);
-                console.log(errors.errors);
+                console.log('Valideringsfejl:', errors.errors);
+                alert('Der opstod en fejl ved gemning. Tjek venligst alle felter og prøv igen.');
             },
         });
     } else if (currentStep.value === 2 && canProceedToStep3.value) {
@@ -441,7 +453,6 @@ const sanitizeSelectedSkillsForJobTitle = () => {
 watch(() => props.report, (newReport) => {
     if (newReport) {
         reportId.value = newReport.id;
-        currentStep.value = initialStep.value;
         persistedDocument.value = newReport.document ?? null;
         selectedSkills.value = newReport.skill_ids ?? [];
         
@@ -449,11 +460,24 @@ watch(() => props.report, (newReport) => {
         form.job_title_id = newReport.job_title_id ?? null;
         form.area_of_responsibility_id = newReport.area_of_responsibility_id ?? null;
         form.experience = newReport.experience ?? null;
-        form.gender = newReport.gender ?? null;
+        // Normaliser gender: konverter tom streng til null
+        form.gender = newReport.gender && newReport.gender.trim() !== '' ? newReport.gender : null;
         form.region_id = newReport.region_id ?? null;
         form.responsibility_level_id = newReport.responsibility_level_id ?? null;
         form.team_size = newReport.team_size ?? null;
         form.skill_ids = newReport.skill_ids ?? [];
+        
+        // Opdater step baseret på report.step eller beregnet step
+        // Hvis step 1 er fuldført (report eksisterer med data) men ingen responsibility_level_id,
+        // skal vi være klar til step 2
+        let newStep = newReport.step ?? initialStep.value;
+        if (newStep === 1 && newReport.job_title_id && newReport.region_id && newReport.experience !== null) {
+            // Step 1 er fuldført, så vi kan gå til step 2 hvis der ikke er responsibility_level_id endnu
+            if (!newReport.responsibility_level_id) {
+                newStep = 2;
+            }
+        }
+        currentStep.value = newStep;
     }
 }, { immediate: true });
 
@@ -472,6 +496,13 @@ watch(() => form.job_title_id, () => {
 
 watch(jobTitleSkillIds, () => {
     sanitizeSelectedSkillsForJobTitle();
+});
+
+// Normaliser gender: konverter tom streng til null
+watch(() => form.gender, (newValue) => {
+    if (newValue === '' || newValue === null) {
+        form.gender = null;
+    }
 });
 
 // Computed options for comboboxes
@@ -720,10 +751,13 @@ sanitizeSelectedSkillsForJobTitle();
                                 class="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             >
                                 <option :value="null">Vælg køn</option>
-                                <option value="mand">Mand</option>
-                                <option value="kvinde">Kvinde</option>
-                                <option value="andet">Andet</option>
+                                <option value="Mand">Mand</option>
+                                <option value="Kvinde">Kvinde</option>
+                                <option value="Andet">Andet</option>
                             </select>
+                            <p v-if="form.gender" class="mt-1 text-xs text-muted-foreground">
+                                Valgt: {{ form.gender }}
+                            </p>
                         </div>
 
                         <!-- Region -->

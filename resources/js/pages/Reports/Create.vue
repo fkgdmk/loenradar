@@ -396,9 +396,9 @@ const submitForm = () => {
         skill_ids: form.skill_ids,
     });
 
-    finalForm.post(reports().store().url, {
+    finalForm.post('/reports', {
         onSuccess: () => {
-            router.visit(reports().index().url);
+            // Inertia automatisk redirect
         },
     });
 };

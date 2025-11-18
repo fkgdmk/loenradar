@@ -21,6 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/reports/{report}/step1', [App\Http\Controllers\ReportsController::class, 'updateStep1'])->name('reports.updateStep1');
     Route::patch('/reports/{report}/step2', [App\Http\Controllers\ReportsController::class, 'updateStep2'])->name('reports.updateStep2');
     Route::post('/reports', [App\Http\Controllers\ReportsController::class, 'store'])->name('reports.store');
+    Route::get('/reports/{report}', [App\Http\Controllers\ReportsController::class, 'show'])->name('reports.show');
     Route::get('/payslips/review', [App\Http\Controllers\PayslipReviewController::class, 'index'])->name('payslips.review.index');
     Route::post('/payslips/{payslip}/approve', [App\Http\Controllers\PayslipReviewController::class, 'approve'])->name('payslips.review.approve');
     Route::post('/payslips/{payslip}/deny', [App\Http\Controllers\PayslipReviewController::class, 'deny'])->name('payslips.review.deny');

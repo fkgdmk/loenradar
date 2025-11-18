@@ -331,6 +331,30 @@ class ReportsController extends Controller
     }
 
     /**
+     * Display the specified report.
+     */
+    public function show(Request $request, Report $report): Response
+    {
+        if ($report->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $report->load([
+            'jobTitle.prosaCategories.salaryStats',
+            'region.prosaAreas',
+            'areaOfResponsibility',
+            'payslips' => function ($query) {
+                $query->orderBy('experience', 'asc')->with('region');
+            },
+            'uploadedPayslip'
+        ]);
+
+        return Inertia::render('Reports/Show', [
+            'report' => $report,
+        ]);
+    }
+
+    /**
      * Store a newly created report.
      */
     public function store(Request $request)
@@ -371,13 +395,79 @@ class ReportsController extends Controller
                 ]),
             ]);
 
+            // Beregn statistik
+            $experience = $report->experience;
+            $experienceRange = $this->getExperienceRange($experience);
+
+            $matchingPayslips = Payslip::where('job_title_id', $report->job_title_id)
+                ->whereBetween('experience', $experienceRange)
+                ->where('id', '!=', $report->uploaded_payslip_id)
+                ->whereNotNull('verified_at')
+                ->whereNotNull('salary')
+                ->get();
+
+            $salaries = $matchingPayslips->pluck('salary')->sort()->values();
+            $count = $salaries->count();
+
+            $lower = 0;
+            $median = 0;
+            $upper = 0;
+
+            if ($count > 0) {
+                $lower = $this->calculatePercentile($salaries, 0.25);
+                $median = $this->calculatePercentile($salaries, 0.50);
+                $upper = $this->calculatePercentile($salaries, 0.75);
+
+                // Attach payslips
+                $report->payslips()->sync($matchingPayslips->pluck('id'));
+            }
+
+            $conclusion = "Baseret på {$count} datapunkter for din profil, er et realistisk og velbegrundet lønudspil i intervallet " . number_format($lower, 0, ',', '.') . " kr. til " . number_format($upper, 0, ',', '.') . " kr.";
+
+            $report->update([
+                'lower_percentile' => $lower,
+                'median' => $median,
+                'upper_percentile' => $upper,
+                'conclusion' => $conclusion,
+            ]);
+
             DB::commit();
 
-            return redirect()->route('reports.index')
+            return redirect()->route('reports.show', $report->id)
                 ->with('success', 'Rapport oprettet succesfuldt');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af rapporten.']);
+            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af rapporten: ' . $e->getMessage()]);
         }
+    }
+
+    private function getExperienceRange($years)
+    {
+        if ($years <= 5) {
+            return [0, 5];
+        }
+        if ($years <= 11) {
+            return [6, 11];
+        }
+        if ($years <= 20) {
+            return [12, 20];
+        }
+        return [21, 100];
+    }
+
+    private function calculatePercentile($sortedData, $percentile)
+    {
+        $index = ($sortedData->count() - 1) * $percentile;
+        $floor = floor($index);
+        $ceil = ceil($index);
+
+        if ($floor == $ceil) {
+            return $sortedData[$index];
+        }
+
+        $d0 = $sortedData[$floor];
+        $d1 = $sortedData[$ceil];
+
+        return $d0 + ($d1 - $d0) * ($index - $floor);
     }
 }

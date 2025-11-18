@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -31,6 +32,7 @@ class Payslip extends Model implements HasMedia
         'verified_at',
         'denied_at',
         'experience',
+        'uploader_id',
     ];
 
     /**
@@ -119,5 +121,21 @@ class Payslip extends Model implements HasMedia
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class, 'region_id');
+    }
+
+    /**
+     * Get the reports for this payslip
+     */
+    public function reports(): BelongsToMany
+    {
+        return $this->belongsToMany(Report::class, 'payslip_report', 'payslip_id', 'report_id');
+    }
+
+    /**
+     * Get the user who uploaded this payslip
+     */
+    public function uploader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'uploader_id');
     }
 }

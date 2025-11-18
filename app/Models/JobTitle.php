@@ -32,4 +32,12 @@ class JobTitle extends Model
     {
         return $this->belongsToMany(ProsaJobCategory::class, 'job_title_prosa_category_mapping', 'job_title_id', 'prosa_category_id');
     }
+
+    /**
+     * Get the skills for this job title
+     */
+    public function skills(): BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class, 'job_title_skill', 'job_title_id', 'skill_id');
+    }
 }

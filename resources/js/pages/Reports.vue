@@ -5,7 +5,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { dashboard, reports } from '@/routes';
+import { dashboard } from '@/routes';
 import { Briefcase, MapPin, TrendingUp, Calendar, Plus, FileText } from 'lucide-vue-next';
 
 interface Report {
@@ -35,7 +35,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
     {
         title: 'Rapporter',
-        href: reports().url,
+        href: '/reports',
     },
 ];
 
@@ -59,7 +59,7 @@ const formatCurrency = (value: number | null): string => {
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold text-foreground">Rapporter</h1>
                 <Button as-child>
-                    <Link :href="reports().url">
+                    <Link href="/reports/create">
                         <Plus class="mr-2 h-4 w-4" />
                         Opret
                     </Link>
@@ -79,7 +79,7 @@ const formatCurrency = (value: number | null): string => {
                     Opret din første rapport for at få et overblik over lønstatistikker baseret på dine filtre.
                 </p>
                 <Button as-child size="lg">
-                    <Link :href="reports().url">
+                    <Link href="/reports/create">
                         <Plus class="mr-2 h-4 w-4" />
                         Opret Rapport
                     </Link>

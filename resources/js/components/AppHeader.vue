@@ -31,9 +31,9 @@ import {
 import UserMenuContent from '@/components/UserMenuContent.vue';
 import { getInitials } from '@/composables/useInitials';
 import { toUrl, urlIsActive } from '@/lib/utils';
-import { dashboard, reports } from '@/routes';
+import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
-import { InertiaLinkProps, Link, usePage } from '@inertiajs/vue3';
+import { InertiaLinkProps, Link, router, usePage } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid, Menu, Search, FileText } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -68,7 +68,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Rapporter',
-        href: reports(),
+        href: '/reports',
         icon: FileText,
     },
 ];

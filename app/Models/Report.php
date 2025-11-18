@@ -23,6 +23,8 @@ class Report extends Model
         'area_of_responsibility_id',
         'region_id',
         'user_id',
+        'uploaded_payslip_id',
+        'status',
         'lower_percentile',
         'median',
         'upper_percentile',
@@ -80,5 +82,13 @@ class Report extends Model
     public function payslips(): BelongsToMany
     {
         return $this->belongsToMany(Payslip::class, 'payslip_report', 'report_id', 'payslip_id');
+    }
+
+    /**
+     * Get the uploaded payslip for this report
+     */
+    public function uploadedPayslip(): BelongsTo
+    {
+        return $this->belongsTo(Payslip::class, 'uploaded_payslip_id');
     }
 }

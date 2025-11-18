@@ -33,6 +33,9 @@ class Payslip extends Model implements HasMedia
         'denied_at',
         'experience',
         'uploader_id',
+        'responsibility_level_id',
+        'team_size',
+        'gender',
     ];
 
     /**
@@ -137,5 +140,13 @@ class Payslip extends Model implements HasMedia
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploader_id');
+    }
+
+    /**
+     * Get the responsibility level for this payslip
+     */
+    public function responsibilityLevel(): BelongsTo
+    {
+        return $this->belongsTo(ResponsibilityLevel::class, 'responsibility_level_id');
     }
 }

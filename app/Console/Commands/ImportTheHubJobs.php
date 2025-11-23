@@ -64,7 +64,18 @@ class ImportTheHubJobs extends Command
         try {
 
             $jobTitles = [
-                'Full-stack Udvikler' => 'https://thehub.io/jobs?roles=fullstackdeveloper&countryCode=DK&sorting=newJobs',
+                'Backend Udvikler' => 'https://thehub.io/jobs?roles=backenddeveloper&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
+                'Data Scientist' => 'https://thehub.io/jobs?roles=datascience&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
+                'DevOps Engineer' => 'https://thehub.io/jobs?roles=devops&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
+                'Frontend Udvikler' => 'https://thehub.io/jobs?roles=frontenddeveloper&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
+                'Full-stack Udvikler' => 'https://thehub.io/jobs?roles=fullstackdeveloper&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
+                'UX/UI Designer' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=uxuidesigner&countryCode=DK&sorting=newJobs',
+                'Product Manager' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=productmanagement&countryCode=DK&sorting=newJobs',
+                'Data Analyst' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=analyst&countryCode=DK&sorting=newJobs',
+                'Projektleder' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=projectmanagement&countryCode=DK&sorting=newJobs',
+                'Softwareudvikler' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=engineer&countryCode=DK&sorting=newJobs',
+                'Softwareudvikler' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&search=software%20developer&countryCode=DK&sorting=newJobs',
+                'Marketingkoordinator' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=marketing&search=Manager&countryCode=DK&sorting=newJobs',
             ];
 
             foreach ($jobTitles as $jobTitle => $baseUrl) {

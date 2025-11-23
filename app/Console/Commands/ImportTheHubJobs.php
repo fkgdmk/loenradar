@@ -362,6 +362,15 @@ class ImportTheHubJobs extends Command
         if ($jsonData) {
             $parsed = $this->parseJobFromJson($jsonData, $url);
             if ($parsed) {
+                // Hvis company ikke fundet i JSON, prøv at hente fra HTML
+                if (empty($parsed['company'])) {
+                    $dom = new DOMDocument();
+                    libxml_use_internal_errors(true);
+                    @$dom->loadHTML('<?xml encoding="UTF-8">' . $html);
+                    libxml_clear_errors();
+                    $xpath = new DOMXPath($dom);
+                    $parsed['company'] = $this->extractCompany($xpath);
+                }
                 return $parsed;
             }
         }
@@ -415,6 +424,9 @@ class ImportTheHubJobs extends Command
         // Ekstraher skills (tags/keywords)
         $skills = $this->extractSkills($xpath);
 
+        // Ekstraher company navn
+        $company = $this->extractCompany($xpath);
+
         if (!$title) {
             return null;
         }
@@ -429,6 +441,7 @@ class ImportTheHubJobs extends Command
             'minimum_experience' => $minimumExperience,
             'region_id' => $region?->id,
             'skills' => $skills,
+            'company' => $company,
         ];
     }
 
@@ -500,7 +513,31 @@ class ImportTheHubJobs extends Command
             }
         }
 
-        // Pattern 2: "45,000 - 55,000 DKK" eller "45.000 - 55.000 kr."
+        // Pattern 2a: "46.000 kr. - 52.000 kr." eller "45,000 DKK - 55,000 DKK" (kr./DKK efter begge tal)
+        if (preg_match('/(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?)\s*[-–—]\s*(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?)/i', $text, $matches)) {
+            $from = $this->normalizeSalary($matches[1]);
+            $to = $this->normalizeSalary($matches[2]);
+            
+            if ($from && $to && $from <= $to) {
+                $salary['from'] = $from;
+                $salary['to'] = $to;
+                return $salary;
+            }
+        }
+
+        // Pattern 2c: "starts at 46,000 DKK ... up to 52,000 DKK" eller "fra 45.000 kr. til 55.000 kr." (tekst mellem tal)
+        if (preg_match('/(?:starts?\s+at|fra|from)\s+(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?).*?(?:up\s+to|til|to)\s+(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?)/i', $text, $matches)) {
+            $from = $this->normalizeSalary($matches[1]);
+            $to = $this->normalizeSalary($matches[2]);
+            
+            if ($from && $to && $from <= $to) {
+                $salary['from'] = $from;
+                $salary['to'] = $to;
+                return $salary;
+            }
+        }
+
+        // Pattern 2b: "45,000 - 55,000 DKK" eller "45.000 - 55.000 kr." (kr./DKK kun efter sidste tal)
         if (preg_match('/(\d{1,3}(?:[.,]\d{3})*)\s*[-–—]\s*(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?)/i', $text, $matches)) {
             $from = $this->normalizeSalary($matches[1]);
             $to = $this->normalizeSalary($matches[2]);
@@ -525,12 +562,17 @@ class ImportTheHubJobs extends Command
         }
 
         // Pattern 4: "DKK 45,000" eller "45.000 kr." (kun én værdi)
-        if (preg_match('/(?:DKK\s+)?(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?)/i', $text, $matches)) {
-            $value = $this->normalizeSalary($matches[1]);
-            if ($value) {
-                $salary['from'] = $value;
-                $salary['to'] = $value;
-                return $salary;
+        // VIGTIGT: Kun match hvis der IKKE er en bindestreg før eller efter værdien (for at undgå at matche før Pattern 1/2)
+        // Tjek først om der er et interval pattern i teksten - hvis der er, skal Pattern 4 ikke matche
+        $hasIntervalPattern = preg_match('/(?:DKK\s+)?(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?)?\s*[-–—]\s*(?:DKK\s+)?(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?)/i', $text);
+        if (!$hasIntervalPattern) {
+            if (preg_match('/(?:DKK\s+)?(\d{1,3}(?:[.,]\d{3})*)\s*(?:DKK|kr\.?)(?!\s*[-–—])/i', $text, $matches)) {
+                $value = $this->normalizeSalary($matches[1]);
+                if ($value) {
+                    $salary['from'] = $value;
+                    $salary['to'] = $value;
+                    return $salary;
+                }
             }
         }
 
@@ -662,6 +704,75 @@ class ImportTheHubJobs extends Command
     }
 
     /**
+     * Ekstraher company navn fra HTML
+     */
+    private function extractCompany(DOMXPath $xpath): ?string
+    {
+        // Find alle links til /startups/ men ekskluder navigation links
+        $links = $xpath->query("//a[starts-with(@href, '/startups/')]");
+
+        foreach ($links as $link) {
+            if (!($link instanceof \DOMElement)) {
+                continue;
+            }
+
+            $href = $link->getAttribute('href');
+            
+            // Skip navigation links
+            if ($href === '/startups/join' || $href === '/startups' || str_contains($href, '?')) {
+                continue;
+            }
+
+            // Check om linket er i navigation eller footer
+            $parent = $link;
+            $isInNav = false;
+            while ($parent && $parent->nodeName !== 'body') {
+                $tagName = strtolower($parent->nodeName ?? '');
+                $class = '';
+                if ($parent instanceof \DOMElement) {
+                    $class = strtolower($parent->getAttribute('class') ?? '');
+                }
+                if ($tagName === 'nav' || $tagName === 'header' || $tagName === 'footer' || 
+                    str_contains($class, 'nav') || str_contains($class, 'footer') || str_contains($class, 'header')) {
+                    $isInNav = true;
+                    break;
+                }
+                $parent = $parent->parentNode;
+            }
+
+            if ($isInNav) {
+                continue;
+            }
+
+            // Match /startups/[company-name] pattern
+            if (preg_match('/^\/startups\/([^\/]+)$/', $href, $matches)) {
+                $slug = $matches[1];
+                
+                // Prøv at få tekst fra linket
+                $linkText = trim($link->textContent);
+                
+                // Hvis link teksten ikke er "See company profile" eller lignende, brug den
+                $lowerText = strtolower($linkText);
+                if (!empty($linkText) && 
+                    !str_contains($lowerText, 'see') && 
+                    !str_contains($lowerText, 'profile') &&
+                    !str_contains($lowerText, 'read more') &&
+                    strlen($linkText) < 50) {
+                    return $linkText;
+                }
+                
+                // Ellers konverter slug til title case
+                $companyName = str_replace('-', ' ', $slug);
+                $companyName = ucwords(strtolower($companyName));
+                
+                return $companyName;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Ekstraher region fra description tekst
      */
     private function extractRegion(?string $description): ?Region
@@ -758,6 +869,10 @@ class ImportTheHubJobs extends Command
     {
         $this->line("  📋 Titel: " . $jobData['title']);
         
+        if (!empty($jobData['company'])) {
+            $this->line("  🏢 Virksomhed: " . $jobData['company']);
+        }
+        
         if (!empty($jobData['salary_from']) || !empty($jobData['salary_to'])) {
             $salaryStr = '';
             if ($jobData['salary_from']) {
@@ -806,8 +921,10 @@ class ImportTheHubJobs extends Command
                     'region_id' => $jobData['region_id'] ?? null,
                     'salary_from' => $jobData['salary_from'],
                     'salary_to' => $jobData['salary_to'],
+                    'url' => $jobData['url'],
                     'source' => $jobData['source'],
                     'minimum_experience' => $jobData['minimum_experience'],
+                    'company' => $jobData['company'] ?? null,
                 ]
             );
 
@@ -970,6 +1087,25 @@ class ImportTheHubJobs extends Command
             $skills = array_map(fn($t) => is_array($t) ? ($t['name'] ?? $t['title'] ?? '') : $t, $job['tags']);
         }
 
+        // Ekstraher company navn fra JSON eller HTML
+        $company = null;
+        if (isset($job['company'])) {
+            if (is_array($job['company'])) {
+                $company = $job['company']['name'] ?? $job['company']['title'] ?? null;
+            } else {
+                $company = $job['company'];
+            }
+        } elseif (isset($job['startup'])) {
+            if (is_array($job['startup'])) {
+                $company = $job['startup']['name'] ?? $job['startup']['title'] ?? null;
+            } else {
+                $company = $job['startup'];
+            }
+        }
+        
+        // Hvis company ikke fundet i JSON, prøv at parse fra HTML (hvis vi har HTML)
+        // Dette håndteres i parseJobDetails metoden
+
         return [
             'title' => $title,
             'description' => $description,
@@ -980,6 +1116,7 @@ class ImportTheHubJobs extends Command
             'minimum_experience' => $minimumExperience,
             'region_id' => $region?->id,
             'skills' => array_filter($skills),
+            'company' => $company,
         ];
     }
 

@@ -23,6 +23,7 @@ class JobPosting extends Model
         'url',
         'source',
         'minimum_experience',
+        'company',
     ];
 
     /**

@@ -64,6 +64,25 @@ interface Payslip {
     region: Region;
 }
 
+interface Skill {
+    id: number;
+    name: string;
+}
+
+interface JobPosting {
+    id: number;
+    title: string;
+    company: string | null;
+    url: string;
+    salary_from: number | null;
+    salary_to: number | null;
+    region: Region | null;
+    skills: Skill[];
+    pivot: {
+        match_score: number | null;
+    };
+}
+
 interface Report {
     id: number;
     job_title: JobTitle;
@@ -77,6 +96,10 @@ interface Report {
     created_at: string;
     uploaded_payslip_id: number;
     payslips: Payslip[];
+    job_postings?: JobPosting[];
+    filters?: {
+        skill_ids?: number[];
+    };
 }
 
 const props = defineProps<{
@@ -150,6 +173,35 @@ const relevantProsaStats = computed(() => {
 
 const isStatRelevant = (stat: ProsaSalaryStat) => {
     return props.report.experience >= stat.experience_from && props.report.experience <= stat.experience_to;
+};
+
+const getMatchScoreClass = (score: number | null) => {
+    if (!score) return 'bg-muted text-muted-foreground';
+    if (score >= 8) return 'bg-green-500/20 text-green-700 dark:text-green-400';
+    if (score >= 6) return 'bg-blue-500/20 text-blue-700 dark:text-blue-400';
+    if (score >= 4) return 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400';
+    return 'bg-orange-500/20 text-orange-700 dark:text-orange-400';
+};
+
+const formatSalaryRange = (from: number | null, to: number | null) => {
+    if (from && to) {
+        return `${formatCurrency(from)} - ${formatCurrency(to)}`;
+    }
+    if (from) {
+        return `Fra ${formatCurrency(from)}`;
+    }
+    if (to) {
+        return `Til ${formatCurrency(to)}`;
+    }
+    return '';
+};
+
+const getReportSkillIds = (): number[] => {
+    return props.report.filters?.skill_ids || [];
+};
+
+const isSkillMatching = (skillId: number): boolean => {
+    return getReportSkillIds().includes(skillId);
 };
 
 </script>
@@ -409,6 +461,67 @@ const isStatRelevant = (stat: ProsaSalaryStat) => {
                     </Card>
                 </div>
             </div>
+
+            <!-- Job Postings Card -->
+            <Card v-if="report.job_postings && report.job_postings.length > 0">
+                <CardHeader>
+                    <CardTitle>Matchende Jobopslag</CardTitle>
+                    <CardDescription>
+                        Jobopslag der matcher din profil baseret på job titel, region, erfaring og skills.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div class="space-y-3">
+                        <div 
+                            v-for="jobPosting in report.job_postings" 
+                            :key="jobPosting.id"
+                            class="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="font-semibold text-lg">{{ jobPosting.title }}</h3>
+                                    <span 
+                                        class="px-2 py-1 text-xs font-medium rounded-full"
+                                        :class="getMatchScoreClass(jobPosting.pivot.match_score)"
+                                    >
+                                        Match: {{ jobPosting.pivot.match_score ?? 0 }}/10
+                                    </span>
+                                </div>
+                                <div class="space-y-2 text-sm text-muted-foreground">
+                                    <div v-if="jobPosting.company" class="font-medium text-foreground">
+                                        {{ jobPosting.company }}
+                                    </div>
+                                    <div v-if="jobPosting.region" class="flex items-center gap-4">
+                                        <span>{{ jobPosting.region.name }}</span>
+                                        <span v-if="jobPosting.salary_from || jobPosting.salary_to">
+                                            {{ formatSalaryRange(jobPosting.salary_from, jobPosting.salary_to) }}
+                                        </span>
+                                    </div>
+                                    <div v-if="jobPosting.skills && jobPosting.skills.length > 0" class="flex flex-wrap gap-1 mt-2">
+                                        <span
+                                            v-for="skill in jobPosting.skills"
+                                            :key="skill.id"
+                                            class="px-1 py-0.5 text-[9px] rounded border"
+                                            :class="isSkillMatching(skill.id) 
+                                                ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
+                                                : 'bg-muted text-muted-foreground border-border'"
+                                        >
+                                            {{ skill.name }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <Button variant="outline" size="sm" as-child>
+                                    <a :href="jobPosting.url" target="_blank" rel="noopener noreferrer">
+                                        Se opslag <ExternalLink class="ml-2 h-4 w-4" />
+                                    </a>
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     </AppLayout>
 </template>

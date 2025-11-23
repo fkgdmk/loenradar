@@ -351,7 +351,11 @@ class ReportsController extends Controller
             'payslips' => function ($query) {
                 $query->orderBy('experience', 'asc')->with('region');
             },
-            'uploadedPayslip'
+            'uploadedPayslip',
+            'jobPostings' => function ($query) {
+                $query->orderBy('report_job_posting.match_score', 'desc')
+                    ->with(['region', 'skills:id,name']);
+            }
         ]);
 
         return Inertia::render('Reports/Show', [

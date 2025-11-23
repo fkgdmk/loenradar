@@ -97,6 +97,7 @@ class Report extends Model
      */
     public function jobPostings(): BelongsToMany
     {
-        return $this->belongsToMany(JobPosting::class, 'report_job_posting', 'report_id', 'job_posting_id');
+        return $this->belongsToMany(JobPosting::class, 'report_job_posting', 'report_id', 'job_posting_id')
+            ->withPivot('match_score');
     }
 }

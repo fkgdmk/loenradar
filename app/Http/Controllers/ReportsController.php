@@ -9,6 +9,7 @@ use App\Models\Region;
 use App\Models\Report;
 use App\Models\ResponsibilityLevel;
 use App\Models\Skill;
+use App\Services\FindMatchingJobPostings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -434,6 +435,10 @@ class ReportsController extends Controller
                 'upper_percentile' => $upper,
                 'conclusion' => $conclusion,
             ]);
+
+            // Find og forbind matchende job postings
+            $findMatchingJobPostings = new FindMatchingJobPostings();
+            $findMatchingJobPostings->findAndAttach($report);
 
             DB::commit();
 

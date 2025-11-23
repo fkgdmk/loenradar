@@ -49,4 +49,12 @@ class JobPosting extends Model
     {
         return $this->belongsToMany(Skill::class, 'job_posting_skill', 'job_posting_id', 'skill_id');
     }
+
+    /**
+     * Get the reports for this job posting
+     */
+    public function reports(): BelongsToMany
+    {
+        return $this->belongsToMany(Report::class, 'report_job_posting', 'job_posting_id', 'report_id');
+    }
 }

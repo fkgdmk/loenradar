@@ -91,4 +91,12 @@ class Report extends Model
     {
         return $this->belongsTo(Payslip::class, 'uploaded_payslip_id');
     }
+
+    /**
+     * Get the job postings for this report
+     */
+    public function jobPostings(): BelongsToMany
+    {
+        return $this->belongsToMany(JobPosting::class, 'report_job_posting', 'report_id', 'job_posting_id');
+    }
 }

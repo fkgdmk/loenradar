@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\JobPosting;
 use App\Models\Skill;
+use App\Services\ExtractJobPostingExperience;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use OpenAI\Laravel\Facades\OpenAI;
@@ -84,13 +85,21 @@ class MatchJobPostingSkills extends Command
         $this->info("Total antal skills i systemet: " . count($allSkills));
         $this->newLine();
 
+        // Initialiser experience extractor service
+        $experienceExtractor = new ExtractJobPostingExperience();
+
         // Vis omkostningsestimat
-        $costEstimate = $this->estimateCost($jobPostings->count(), count($allSkills));
+        $skillsCostEstimate = $this->estimateCost($jobPostings->count(), count($allSkills));
+        $experienceCostEstimate = $experienceExtractor->estimateCost($jobPostings->count());
+        $totalCostUsd = $skillsCostEstimate['estimated_cost_usd'] + $experienceCostEstimate['estimated_cost_usd'];
+        $totalCostDkk = round($totalCostUsd * 7, 2);
 
         $this->info('💰 Omkostningsestimat:');
-        $this->line("   Antal job postings: {$costEstimate['job_posting_count']}");
-        $this->line("   Antal skills: {$costEstimate['skill_count']}");
-        $this->line("   Estimeret pris: \${$costEstimate['estimated_cost_usd']} USD (~{$costEstimate['estimated_cost_dkk']} DKK)");
+        $this->line("   Antal job postings: {$skillsCostEstimate['job_posting_count']}");
+        $this->line("   Antal skills: {$skillsCostEstimate['skill_count']}");
+        $this->line("   Estimeret pris (skills): \${$skillsCostEstimate['estimated_cost_usd']} USD (~{$skillsCostEstimate['estimated_cost_dkk']} DKK)");
+        $this->line("   Estimeret pris (experience): \${$experienceCostEstimate['estimated_cost_usd']} USD (~{$experienceCostEstimate['estimated_cost_dkk']} DKK)");
+        $this->line("   Total estimeret pris: \${$totalCostUsd} USD (~{$totalCostDkk} DKK)");
         $this->line("   Model: gpt-4o-mini");
         $this->newLine();
 
@@ -101,15 +110,17 @@ class MatchJobPostingSkills extends Command
 
         $this->newLine();
 
-        // Match skills
+        // Match skills og extract experience
         $successCount = 0;
         $failCount = 0;
+        $experienceUpdatedCount = 0;
 
         $progressBar = $this->output->createProgressBar($jobPostings->count());
         $progressBar->start();
 
         foreach ($jobPostings as $jobPosting) {
             try {
+                // Match skills
                 $matchedSkills = $this->matchSkillsWithOpenAI($jobPosting->description, $allSkills);
 
                 if ($matchedSkills !== null) {
@@ -126,10 +137,24 @@ class MatchJobPostingSkills extends Command
                     $jobPosting->skills()->sync($skillIds);
 
                     $successCount++;
-                    $this->newLine();
-                    $this->line("✓ Job Posting #{$jobPosting->id}: Matched " . count($skillIds) . " skill(s)");
                 } else {
                     $failCount++;
+                }
+
+                // Extract minimum experience
+                $minimumExperience = $experienceExtractor->extractMinimumExperience($jobPosting->description);
+                
+                if ($minimumExperience !== null) {
+                    $jobPosting->minimum_experience = $minimumExperience;
+                    $jobPosting->save();
+                    $experienceUpdatedCount++;
+                }
+
+                if ($matchedSkills !== null) {
+                    $this->newLine();
+                    $experienceInfo = $minimumExperience !== null ? " (experience: {$minimumExperience} år)" : "";
+                    $this->line("✓ Job Posting #{$jobPosting->id}: Matched " . count($skillIds ?? []) . " skill(s){$experienceInfo}");
+                } else {
                     $this->newLine();
                     $this->line("⚠ Job Posting #{$jobPosting->id}: Kunne ikke matche skills");
                 }
@@ -159,16 +184,18 @@ class MatchJobPostingSkills extends Command
         $this->info('✅ Matching afsluttet!');
         $this->info('📊 Resultat:');
         $this->line("   • Total processeret: {$jobPostings->count()}");
-        $this->line("   • Succesfulde: {$successCount}");
-        $this->line("   • Fejlede: {$failCount}");
-        $this->line("   • Estimeret omkostning: \${$costEstimate['estimated_cost_usd']} USD");
+        $this->line("   • Succesfulde (skills): {$successCount}");
+        $this->line("   • Fejlede (skills): {$failCount}");
+        $this->line("   • Experience opdateret: {$experienceUpdatedCount}");
+        $this->line("   • Total estimeret omkostning: \${$totalCostUsd} USD");
         $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-        Log::info('Skill matching afsluttet', [
+        Log::info('Skill matching og experience extraction afsluttet', [
             'total' => $jobPostings->count(),
             'success' => $successCount,
             'failed' => $failCount,
-            'estimated_cost_usd' => $costEstimate['estimated_cost_usd'],
+            'experience_updated' => $experienceUpdatedCount,
+            'estimated_cost_usd' => $totalCostUsd,
         ]);
 
         return Command::SUCCESS;

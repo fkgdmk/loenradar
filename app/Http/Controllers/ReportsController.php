@@ -467,7 +467,7 @@ class ReportsController extends Controller
             $matchingPayslips = $result['payslips'];
             $description = $result['description'];
 
-            $salaries = $matchingPayslips->pluck('salary')->sort()->values();
+            $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
             $count = $salaries->count();
 
             $lower = 0;

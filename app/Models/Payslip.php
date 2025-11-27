@@ -55,6 +55,10 @@ class Payslip extends Model implements HasMedia
         'company_pension_procent' => 'decimal:2',
     ];
 
+    protected $appends = [
+        'total_salary_dkk',
+    ];
+
     /**
      * Register media collections
      */
@@ -155,7 +159,7 @@ class Payslip extends Model implements HasMedia
         return $this->belongsTo(ResponsibilityLevel::class, 'responsibility_level_id');
     }
 
-    public function getTotalSalaryDKK(): int
+    public function getTotalSalaryDkkAttribute(): int
     {
         return $this->salary + $this->company_pension_dkk;
     }

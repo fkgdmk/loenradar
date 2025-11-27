@@ -71,11 +71,13 @@ class ImportTheHubJobs extends Command
                 'Full-stack Udvikler' => 'https://thehub.io/jobs?roles=fullstackdeveloper&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
                 'UX/UI Designer' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=uxuidesigner&countryCode=DK&sorting=newJobs',
                 'Product Manager' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=productmanagement&countryCode=DK&sorting=newJobs',
-                'Data Analyst' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=analyst&countryCode=DK&sorting=newJobs',
+                'Data Analyst' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=analyst&countryCode=DK&sorting=newJobs', 
                 'Projektleder' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=projectmanagement&countryCode=DK&sorting=newJobs',
                 'Softwareudvikler' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=engineer&countryCode=DK&sorting=newJobs',
                 'Softwareudvikler' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&search=software%20developer&countryCode=DK&sorting=newJobs',
-                'Marketingkoordinator' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=marketing&search=Manager&countryCode=DK&sorting=newJobs',
+                'Marketingchef' => 'https://thehub.io/jobs?roles=marketing&search=Manager&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
+                'Customer Success Direktør' => 'https://thehub.io/jobs?roles=customersuccess&search=Manager&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
+                'Marketing Direktør' => 'https://thehub.io/jobs?roles=marketing&search=Director&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
             ];
 
             foreach ($jobTitles as $jobTitle => $baseUrl) {

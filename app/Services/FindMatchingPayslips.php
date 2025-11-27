@@ -35,7 +35,7 @@ class FindMatchingPayslips
         $description = null;
 
         if ($matchingPayslips->count() < 5) {
-            $description = "Grundet begrænset data i {$report->region->name} er rapporten baseret på tal fra hele landet for dit erfaringsniveau. Brug tallene som et generelt pejlemærke for markedet.";
+            $description = "Grundet begrænset data i {$report->region->name} for din profil er rapporten baseret på tal fra hele landet for dit erfaringsniveau. Brug tallene som et generelt pejlemærke for markedet.";
 
             $matchingPayslips = $baseQuery->clone()
                 ->whereBetween('experience', $experienceRange)

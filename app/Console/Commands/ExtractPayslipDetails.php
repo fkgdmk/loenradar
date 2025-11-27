@@ -28,7 +28,8 @@ class ExtractPayslipDetails extends Command
     public function handle(PayslipDetailExtractor $extractor)
     {
         $query = Payslip::query()
-            ->whereNotNull('verified_at')
+            ->whereNull('verified_at')
+            ->whereNull('denied_at')
             ->whereHas('media')
             ->where(
                 fn($query) => $query->whereNull('company_pension_dkk')

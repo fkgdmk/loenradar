@@ -259,7 +259,7 @@ const isSkillMatching = (skillId: number): boolean => {
                                             {{ report.payslips.length }} datapunkter
                                         </span>
                                     </DialogTrigger>
-                                    <DialogContent class="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                    <DialogContent class="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
                                         <DialogHeader>
                                             <DialogTitle>Datagrundlag</DialogTitle>
                                             <DialogDescription>
@@ -279,7 +279,7 @@ const isSkillMatching = (skillId: number): boolean => {
                                                     </thead>
                                                     <tbody>
                                                         <tr v-for="payslip in report.payslips" :key="payslip.id" class="border-b last:border-0 hover:bg-muted/50">
-                                                            <td class="p-4 font-medium">{{ formatCurrency(payslip.salary) }}</td>
+                                                            <td class="p-4 font-medium">{{ formatCurrency(payslip.total_salary_dkk) }}</td>
                                                             <td class="p-4">{{ payslip.region?.name }}</td>
                                                             <td class="p-4">{{ payslip.experience }} år</td>
                                                             <td class="p-4 text-muted-foreground">{{ formatDate(payslip.uploaded_at) }}</td>

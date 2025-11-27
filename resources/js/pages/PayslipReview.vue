@@ -19,6 +19,10 @@ interface PayslipData {
     description: string | null;
     comments: string[] | null;
     salary: number;
+    company_pension_dkk: number | null;
+    company_pension_procent: number | null;
+    salary_supplement: number | null;
+    hours_monthly: number | null;
     sub_job_title: string | null;
     experience: string | null;
     job_title_id: number | null;
@@ -72,11 +76,19 @@ const imageDialogOpen = ref(false);
 const descriptionDialogOpen = ref(false);
 const isEditingExperience = ref(false);
 const isEditingSalary = ref(false);
+const isEditingCompanyPensionDkk = ref(false);
+const isEditingCompanyPensionProcent = ref(false);
+const isEditingSalarySupplement = ref(false);
+const isEditingHoursMonthly = ref(false);
 const isEditingJobTitle = ref(false);
 const isEditingRegion = ref(false);
 const isEditingAreaOfResponsibility = ref(false);
 const experienceInput = ref('');
 const salaryInput = ref('');
+const companyPensionDkkInput = ref('');
+const companyPensionProcentInput = ref('');
+const salarySupplementInput = ref('');
+const hoursMonthlyInput = ref('');
 const jobTitleInput = ref<number | null>(null);
 const regionInput = ref<number | null>(null);
 const areaOfResponsibilityInput = ref<number | null>(null);
@@ -132,6 +144,106 @@ const saveSalary = () => {
         replace: true,
         onSuccess: () => {
             isEditingSalary.value = false;
+        },
+    });
+};
+
+const startEditingCompanyPensionDkk = () => {
+    companyPensionDkkInput.value = props.payslip?.company_pension_dkk?.toString() || '';
+    isEditingCompanyPensionDkk.value = true;
+};
+
+const cancelEditingCompanyPensionDkk = () => {
+    isEditingCompanyPensionDkk.value = false;
+    companyPensionDkkInput.value = '';
+};
+
+const saveCompanyPensionDkk = () => {
+    if (!props.payslip) return;
+    
+    router.patch(`/payslips/${props.payslip.id}/company-pension-dkk`, {
+        company_pension_dkk: companyPensionDkkInput.value ? parseFloat(companyPensionDkkInput.value) : null,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        onSuccess: () => {
+            isEditingCompanyPensionDkk.value = false;
+        },
+    });
+};
+
+const startEditingCompanyPensionProcent = () => {
+    companyPensionProcentInput.value = props.payslip?.company_pension_procent?.toString() || '';
+    isEditingCompanyPensionProcent.value = true;
+};
+
+const cancelEditingCompanyPensionProcent = () => {
+    isEditingCompanyPensionProcent.value = false;
+    companyPensionProcentInput.value = '';
+};
+
+const saveCompanyPensionProcent = () => {
+    if (!props.payslip) return;
+    
+    router.patch(`/payslips/${props.payslip.id}/company-pension-procent`, {
+        company_pension_procent: companyPensionProcentInput.value ? parseFloat(companyPensionProcentInput.value) : null,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        onSuccess: () => {
+            isEditingCompanyPensionProcent.value = false;
+        },
+    });
+};
+
+const startEditingSalarySupplement = () => {
+    salarySupplementInput.value = props.payslip?.salary_supplement?.toString() || '';
+    isEditingSalarySupplement.value = true;
+};
+
+const cancelEditingSalarySupplement = () => {
+    isEditingSalarySupplement.value = false;
+    salarySupplementInput.value = '';
+};
+
+const saveSalarySupplement = () => {
+    if (!props.payslip) return;
+    
+    router.patch(`/payslips/${props.payslip.id}/salary-supplement`, {
+        salary_supplement: salarySupplementInput.value ? parseFloat(salarySupplementInput.value) : null,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        onSuccess: () => {
+            isEditingSalarySupplement.value = false;
+        },
+    });
+};
+
+const startEditingHoursMonthly = () => {
+    hoursMonthlyInput.value = props.payslip?.hours_monthly?.toString() || '';
+    isEditingHoursMonthly.value = true;
+};
+
+const cancelEditingHoursMonthly = () => {
+    isEditingHoursMonthly.value = false;
+    hoursMonthlyInput.value = '';
+};
+
+const saveHoursMonthly = () => {
+    if (!props.payslip) return;
+    
+    router.patch(`/payslips/${props.payslip.id}/hours-monthly`, {
+        hours_monthly: hoursMonthlyInput.value ? parseFloat(hoursMonthlyInput.value) : null,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        onSuccess: () => {
+            isEditingHoursMonthly.value = false;
         },
     });
 };
@@ -437,6 +549,195 @@ const handleFileChange = (event: Event) => {
                             </div>
                         </div>
 
+                        <Separator />
+
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-medium text-muted-foreground">Virksomhedspension (DKK)</h3>
+                                <Button 
+                                    v-if="!isEditingCompanyPensionDkk"
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-6 px-2"
+                                    @click="startEditingCompanyPensionDkk"
+                                >
+                                    <Pencil class="h-3 w-3" />
+                                </Button>
+                            </div>
+                            <div v-if="!isEditingCompanyPensionDkk" class="mt-1">
+                                <p v-if="payslip.company_pension_dkk !== null" class="text-xl font-semibold">{{ payslip.company_pension_dkk?.toLocaleString('da-DK') }} kr.</p>
+                                <p v-else class="text-muted-foreground italic">Ikke angivet</p>
+                            </div>
+                            <div v-else class="mt-1 flex gap-2">
+                                <Input 
+                                    v-model="companyPensionDkkInput" 
+                                    type="number"
+                                    placeholder="F.eks. 5000"
+                                    class="h-8"
+                                    @keyup.enter="saveCompanyPensionDkk"
+                                    @keyup.escape="cancelEditingCompanyPensionDkk"
+                                />
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-8 w-8 p-0"
+                                    @click="saveCompanyPensionDkk"
+                                >
+                                    <Check class="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-8 w-8 p-0"
+                                    @click="cancelEditingCompanyPensionDkk"
+                                >
+                                    <X class="h-4 w-4 text-red-600" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <Separator />
+
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-medium text-muted-foreground">Virksomhedspension (%)</h3>
+                                <Button 
+                                    v-if="!isEditingCompanyPensionProcent"
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-6 px-2"
+                                    @click="startEditingCompanyPensionProcent"
+                                >
+                                    <Pencil class="h-3 w-3" />
+                                </Button>
+                            </div>
+                            <div v-if="!isEditingCompanyPensionProcent" class="mt-1">
+                                <p v-if="payslip.company_pension_procent !== null" class="text-xl font-semibold">{{ payslip.company_pension_procent }}%</p>
+                                <p v-else class="text-muted-foreground italic">Ikke angivet</p>
+                            </div>
+                            <div v-else class="mt-1 flex gap-2">
+                                <Input 
+                                    v-model="companyPensionProcentInput" 
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="F.eks. 10.5"
+                                    class="h-8"
+                                    @keyup.enter="saveCompanyPensionProcent"
+                                    @keyup.escape="cancelEditingCompanyPensionProcent"
+                                />
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-8 w-8 p-0"
+                                    @click="saveCompanyPensionProcent"
+                                >
+                                    <Check class="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-8 w-8 p-0"
+                                    @click="cancelEditingCompanyPensionProcent"
+                                >
+                                    <X class="h-4 w-4 text-red-600" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <Separator />
+
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-medium text-muted-foreground">Løntillæg</h3>
+                                <Button 
+                                    v-if="!isEditingSalarySupplement"
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-6 px-2"
+                                    @click="startEditingSalarySupplement"
+                                >
+                                    <Pencil class="h-3 w-3" />
+                                </Button>
+                            </div>
+                            <div v-if="!isEditingSalarySupplement" class="mt-1">
+                                <p v-if="payslip.salary_supplement !== null" class="text-xl font-semibold">{{ payslip.salary_supplement?.toLocaleString('da-DK') }} kr.</p>
+                                <p v-else class="text-muted-foreground italic">Ikke angivet</p>
+                            </div>
+                            <div v-else class="mt-1 flex gap-2">
+                                <Input 
+                                    v-model="salarySupplementInput" 
+                                    type="number"
+                                    placeholder="F.eks. 2000"
+                                    class="h-8"
+                                    @keyup.enter="saveSalarySupplement"
+                                    @keyup.escape="cancelEditingSalarySupplement"
+                                />
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-8 w-8 p-0"
+                                    @click="saveSalarySupplement"
+                                >
+                                    <Check class="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-8 w-8 p-0"
+                                    @click="cancelEditingSalarySupplement"
+                                >
+                                    <X class="h-4 w-4 text-red-600" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <Separator />
+
+                        <div>
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-medium text-muted-foreground">Timer pr. måned</h3>
+                                <Button 
+                                    v-if="!isEditingHoursMonthly"
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-6 px-2"
+                                    @click="startEditingHoursMonthly"
+                                >
+                                    <Pencil class="h-3 w-3" />
+                                </Button>
+                            </div>
+                            <div v-if="!isEditingHoursMonthly" class="mt-1">
+                                <p v-if="payslip.hours_monthly !== null" class="text-xl font-semibold">{{ payslip.hours_monthly }} timer</p>
+                                <p v-else class="text-muted-foreground italic">Ikke angivet</p>
+                            </div>
+                            <div v-else class="mt-1 flex gap-2">
+                                <Input 
+                                    v-model="hoursMonthlyInput" 
+                                    type="number"
+                                    placeholder="F.eks. 160"
+                                    class="h-8"
+                                    @keyup.enter="saveHoursMonthly"
+                                    @keyup.escape="cancelEditingHoursMonthly"
+                                />
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-8 w-8 p-0"
+                                    @click="saveHoursMonthly"
+                                >
+                                    <Check class="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    class="h-8 w-8 p-0"
+                                    @click="cancelEditingHoursMonthly"
+                                >
+                                    <X class="h-4 w-4 text-red-600" />
+                                </Button>
+                            </div>
+                        </div>
+
                         <div v-if="payslip.description">
                             <div class="flex items-center justify-between">
                                 <h3 class="text-sm font-medium text-muted-foreground">Beskrivelse</h3>
@@ -490,7 +791,7 @@ const handleFileChange = (event: Event) => {
                                         :key="jobTitle.id" 
                                         :value="jobTitle.id"
                                     >
-                                        {{ jobTitle.name }}
+                                        {{ jobTitle.name_en }}
                                     </option>
                                 </select>
                                 <Button 

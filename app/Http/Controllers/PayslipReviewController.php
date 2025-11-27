@@ -23,9 +23,8 @@ class PayslipReviewController extends Controller
             $payslip = Payslip::with(['jobTitle', 'areaOfResponsibility', 'region', 'media'])
                 ->find($payslipId);
         } else {
-            // Find næste payslip der skal gennemgås
+            // Find næste payslip der skal gennemgåsxt
             $payslip = Payslip::whereNotNull('job_title_id')
-                ->whereNotNull('salary')
                 ->whereNull('verified_at')
                 ->whereNull('denied_at')
                 ->with(['jobTitle', 'areaOfResponsibility', 'region', 'media'])
@@ -42,7 +41,7 @@ class PayslipReviewController extends Controller
         // Hent alle job titles, regions og areas of responsibility til dropdowns
         $jobTitles = JobTitle::orderBy('name')->get()->map(fn($jt) => [
             'id' => $jt->id,
-            'name' => $jt->name,
+            'name_en' => $jt->name_en,
         ]);
 
         $regions = Region::orderBy('name')->get()->map(fn($r) => [
@@ -62,6 +61,10 @@ class PayslipReviewController extends Controller
                 'description' => $payslip->description,
                 'comments' => $payslip->comments,
                 'salary' => $payslip->salary,
+                'company_pension_dkk' => $payslip->company_pension_dkk,
+                'company_pension_procent' => $payslip->company_pension_procent,
+                'salary_supplement' => $payslip->salary_supplement,
+                'hours_monthly' => $payslip->hours_monthly,
                 'sub_job_title' => $payslip->sub_job_title,
                 'experience' => $payslip->experience,
                 'job_title_id' => $payslip->job_title_id,
@@ -159,6 +162,70 @@ class PayslipReviewController extends Controller
 
         $payslip->update([
             'salary' => $validated['salary'],
+        ]);
+
+        return redirect()->route('payslips.review.index', ['payslip' => $payslip->id]);
+    }
+
+    /**
+     * Opdater virksomhedspension (DKK) på payslip
+     */
+    public function updateCompanyPensionDkk(Request $request, Payslip $payslip)
+    {
+        $validated = $request->validate([
+            'company_pension_dkk' => 'nullable|numeric|min:0',
+        ]);
+
+        $payslip->update([
+            'company_pension_dkk' => $validated['company_pension_dkk'] ?? null,
+        ]);
+
+        return redirect()->route('payslips.review.index', ['payslip' => $payslip->id]);
+    }
+
+    /**
+     * Opdater virksomhedspension (%) på payslip
+     */
+    public function updateCompanyPensionProcent(Request $request, Payslip $payslip)
+    {
+        $validated = $request->validate([
+            'company_pension_procent' => 'nullable|numeric|min:0|max:100',
+        ]);
+
+        $payslip->update([
+            'company_pension_procent' => $validated['company_pension_procent'] ?? null,
+        ]);
+
+        return redirect()->route('payslips.review.index', ['payslip' => $payslip->id]);
+    }
+
+    /**
+     * Opdater løntillæg på payslip
+     */
+    public function updateSalarySupplement(Request $request, Payslip $payslip)
+    {
+        $validated = $request->validate([
+            'salary_supplement' => 'nullable|numeric|min:0',
+        ]);
+
+        $payslip->update([
+            'salary_supplement' => $validated['salary_supplement'] ?? null,
+        ]);
+
+        return redirect()->route('payslips.review.index', ['payslip' => $payslip->id]);
+    }
+
+    /**
+     * Opdater timer pr. måned på payslip
+     */
+    public function updateHoursMonthly(Request $request, Payslip $payslip)
+    {
+        $validated = $request->validate([
+            'hours_monthly' => 'nullable|numeric|min:0',
+        ]);
+
+        $payslip->update([
+            'hours_monthly' => $validated['hours_monthly'] ?? null,
         ]);
 
         return redirect()->route('payslips.review.index', ['payslip' => $payslip->id]);

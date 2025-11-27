@@ -154,4 +154,9 @@ class Payslip extends Model implements HasMedia
     {
         return $this->belongsTo(ResponsibilityLevel::class, 'responsibility_level_id');
     }
+
+    public function getTotalSalaryDKK(): int
+    {
+        return $this->salary + $this->company_pension_dkk;
+    }
 }

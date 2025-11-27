@@ -30,7 +30,10 @@ class ExtractPayslipDetails extends Command
         $query = Payslip::query()
             ->whereNotNull('verified_at')
             ->whereHas('media')
-            ->whereNull('company_pension_dkk'); // Antager at hvis denne er null, så mangler vi nok data eller har ikke kørt før
+            ->where(
+                fn($query) => $query->whereNull('company_pension_dkk')
+                    ->whereNull('company_pension_procent')
+            );
 
         $count = $query->count();
         

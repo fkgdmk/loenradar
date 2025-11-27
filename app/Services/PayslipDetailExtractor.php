@@ -50,6 +50,11 @@ class PayslipDetailExtractor
                 if (isset($details['salary_supplement'])) $updateData['salary_supplement'] = $details['salary_supplement'];
                 if (isset($details['hours_monthly'])) $updateData['hours_monthly'] = $details['hours_monthly'];
 
+                // Hvis enten company_pension_dkk eller company_pension_procent opdateres, nulstil verified_at
+                if (isset($updateData['company_pension_dkk']) || isset($updateData['company_pension_procent'])) {
+                    $updateData['verified_at'] = null;
+                }
+
                 if (!empty($updateData)) {
                     $payslip->update($updateData);
                     
@@ -89,7 +94,7 @@ class PayslipDetailExtractor
                 Brug følgende "Chain of Thought" proces før du svarer:
 
                 TRIN 1: PENSION ANALYSE
-                - Scan dokumentet for ordet "Pension", "Arbejdsgiverbidrag", "Firmabidrag", "Pension (firma)", "Arbejdsgiver".
+                - Scan dokumentet for ordet "Pension", "Arbejdsgiverbidrag", "Firmabidrag", "Pension (firma)", "Arbejdsgiver", "AM-pension", "AG bidrag",
                 - Identificer linjer der vedrører pension.
                 - SKELN skarpt mellem "Eget bidrag" (medarbejderens andel) og "Firma/Arbejdsgiver bidrag".
                 - Vi leder UDELUKKENDE efter firmaets/arbejdsgiverens bidrag.
@@ -97,6 +102,9 @@ class PayslipDetailExtractor
                 - Hvis en procentsats er angivet for arbejdsgiveren (fx 8%, 10%), noter det som "company_pension_procent".
                 - Hvis både beløb og procent findes, returner begge.
                 - Hvis KUN eget bidrag findes, returner NULL for firma pension.
+                - Det er vigtigt du ikke forveksler AM-bidrag med firma pension. Det er det ikke!
+                - Pensionen skal aldrig returneres som et negativt tal.
+                - Beløbet skal altid angives som månedligt beløb. Hvis det er årligt, skal det omregnes til månedligt. Brug datoen i lønsedlen til at omregne.
 
                 TRIN 2: TILLÆG ANALYSE (Salary Supplement)
                 - Scan for tillæg udover grundlønnen.

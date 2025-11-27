@@ -8,6 +8,8 @@ interface Statistics {
     verifiedPayslips: number;
     jobTitles: number;
     salaryDataPoints: number;
+    jobTitlesWith5PlusPayslips: number;
+    jobTitlesWith3PlusJobPostings: number;
 }
 
 interface CountItem {
@@ -17,10 +19,27 @@ interface CountItem {
     verifiedPayslips?: number;
 }
 
+interface RegionListItem {
+    jobTitle: string;
+    region: string;
+    count: number;
+}
+
+interface ExperienceRangeListItem {
+    jobTitle: string;
+    experienceRange: string;
+    count: number;
+}
+
 defineProps<{
     statistics: Statistics;
     jobTitles: CountItem[];
     regions: CountItem[];
+    jobTitlesWith5PlusPayslipsPerRegionList: RegionListItem[];
+    jobTitlesWith3PlusJobPostingsPerRegionList: RegionListItem[];
+    experienceRanges: CountItem[];
+    jobTitlesWith5PlusPayslipsPerExperienceRangeList: ExperienceRangeListItem[];
+    jobTitlesWith5PlusJobPostingsPerExperienceRangeList: ExperienceRangeListItem[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -113,8 +132,61 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
             </div>
 
+            <!-- Nye statistik cards -->
+            <div class="grid auto-rows-min gap-4 md:grid-cols-2">
+                <!-- Jobtitler med 5+ lønsedler -->
+                <div
+                    class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 bg-gradient-to-br from-orange-50 to-orange-100 p-6 dark:border-sidebar-border dark:from-orange-950/50 dark:to-orange-900/30"
+                >
+                    <div class="flex h-full flex-col justify-between">
+                        <div
+                            class="text-sm font-medium text-orange-700 dark:text-orange-300"
+                        >
+                            Jobtitler med 5+ lønsedler
+                        </div>
+                        <div class="space-y-1">
+                            <div
+                                class="text-4xl font-bold text-orange-900 dark:text-orange-50"
+                            >
+                                {{ statistics.jobTitlesWith5PlusPayslips }}
+                            </div>
+                            <div
+                                class="text-xs text-orange-600 dark:text-orange-400"
+                            >
+                                Verificerede lønsedler
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jobtitler med 3+ jobopslag -->
+                <div
+                    class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 bg-gradient-to-br from-teal-50 to-teal-100 p-6 dark:border-sidebar-border dark:from-teal-950/50 dark:to-teal-900/30"
+                >
+                    <div class="flex h-full flex-col justify-between">
+                        <div
+                            class="text-sm font-medium text-teal-700 dark:text-teal-300"
+                        >
+                            Jobtitler med 3+ jobopslag
+                        </div>
+                        <div class="space-y-1">
+                            <div
+                                class="text-4xl font-bold text-teal-900 dark:text-teal-50"
+                            >
+                                {{ statistics.jobTitlesWith3PlusJobPostings }}
+                            </div>
+                            <div
+                                class="text-xs text-teal-600 dark:text-teal-400"
+                            >
+                                Totalt antal jobtitler
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Liste sektioner -->
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4 md:grid-cols-3">
                 <!-- Jobtitler Liste -->
                 <div
                     class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar"
@@ -124,7 +196,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     >
                         Jobtitler
                     </h2>
-                    <div class="space-y-2">
+                    <div class="h-96 space-y-2 overflow-y-auto">
                         <div
                             v-for="jobTitle in jobTitles"
                             :key="jobTitle.name"
@@ -157,16 +229,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
 
-                <!-- Regioner Liste -->
+                <!-- Statistiske grupper Liste -->
                 <div
                     class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar"
                 >
                     <h2
                         class="mb-4 text-lg font-semibold text-foreground"
                     >
-                        Regioner
+                        Statistiske grupper
                     </h2>
-                    <div class="space-y-2">
+                    <div class="h-96 space-y-2 overflow-y-auto">
                         <div
                             v-for="region in regions"
                             :key="region.name"
@@ -185,7 +257,198 @@ const breadcrumbs: BreadcrumbItem[] = [
                             v-if="regions.length === 0"
                             class="py-8 text-center text-muted-foreground"
                         >
-                            Ingen regioner fundet
+                            Ingen statistiske grupper fundet
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Erfaringsniveauer Liste -->
+                <div
+                    class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar"
+                >
+                    <h2
+                        class="mb-4 text-lg font-semibold text-foreground"
+                    >
+                        Erfaringsniveauer
+                    </h2>
+                    <div class="h-96 space-y-2 overflow-y-auto">
+                        <div
+                            v-for="experienceRange in experienceRanges"
+                            :key="experienceRange.name"
+                            class="flex items-center justify-between rounded-lg border border-sidebar-border/50 bg-sidebar/50 px-4 py-3 transition-colors hover:bg-sidebar/80"
+                        >
+                            <span class="font-medium text-foreground">
+                                {{ experienceRange.name }}
+                            </span>
+                            <span
+                                class="rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                            >
+                                {{ experienceRange.count }}
+                            </span>
+                        </div>
+                        <div
+                            v-if="experienceRanges.length === 0"
+                            class="py-8 text-center text-muted-foreground"
+                        >
+                            Ingen erfaringsniveauer fundet
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nye lister -->
+            <div class="grid gap-4 md:grid-cols-2">
+                <!-- Jobtitler med 5+ lønsedler pr statistisk gruppe -->
+                <div
+                    class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar"
+                >
+                    <h2
+                        class="mb-4 text-lg font-semibold text-foreground"
+                    >
+                        Jobtitler med ≥5 lønsedler pr statistisk gruppe
+                    </h2>
+                    <div class="h-96 space-y-2 overflow-y-auto">
+                        <div
+                            v-for="(item, index) in jobTitlesWith5PlusPayslipsPerRegionList"
+                            :key="`${item.jobTitle}-${item.region}-${index}`"
+                            class="flex items-center justify-between rounded-lg border border-sidebar-border/50 bg-sidebar/50 px-4 py-3 transition-colors hover:bg-sidebar/80"
+                        >
+                            <div class="flex flex-col">
+                                <span class="font-medium text-foreground">
+                                    {{ item.jobTitle }}
+                                </span>
+                                <span class="text-sm text-muted-foreground">
+                                    {{ item.region }}
+                                </span>
+                            </div>
+                            <span
+                                class="rounded-full bg-orange-100 px-3 py-1 text-sm font-semibold text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
+                            >
+                                {{ item.count }}
+                            </span>
+                        </div>
+                        <div
+                            v-if="jobTitlesWith5PlusPayslipsPerRegionList.length === 0"
+                            class="py-8 text-center text-muted-foreground"
+                        >
+                            Ingen jobtitler fundet
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jobtitler med 3+ jobopslag pr statistisk gruppe -->
+                <div
+                    class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar"
+                >
+                    <h2
+                        class="mb-4 text-lg font-semibold text-foreground"
+                    >
+                        Jobtitler med ≥3 jobopslag pr statistisk gruppe
+                    </h2>
+                    <div class="h-96 space-y-2 overflow-y-auto">
+                        <div
+                            v-for="(item, index) in jobTitlesWith3PlusJobPostingsPerRegionList"
+                            :key="`${item.jobTitle}-${item.region}-${index}`"
+                            class="flex items-center justify-between rounded-lg border border-sidebar-border/50 bg-sidebar/50 px-4 py-3 transition-colors hover:bg-sidebar/80"
+                        >
+                            <div class="flex flex-col">
+                                <span class="font-medium text-foreground">
+                                    {{ item.jobTitle }}
+                                </span>
+                                <span class="text-sm text-muted-foreground">
+                                    {{ item.region }}
+                                </span>
+                            </div>
+                            <span
+                                class="rounded-full bg-teal-100 px-3 py-1 text-sm font-semibold text-teal-700 dark:bg-teal-900/30 dark:text-teal-300"
+                            >
+                                {{ item.count }}
+                            </span>
+                        </div>
+                        <div
+                            v-if="jobTitlesWith3PlusJobPostingsPerRegionList.length === 0"
+                            class="py-8 text-center text-muted-foreground"
+                        >
+                            Ingen jobtitler fundet
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Experience range lister -->
+            <div class="grid gap-4 md:grid-cols-2">
+                <!-- Jobtitler med 5+ lønsedler pr erfaringsniveau -->
+                <div
+                    class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar"
+                >
+                    <h2
+                        class="mb-4 text-lg font-semibold text-foreground"
+                    >
+                        Jobtitler med ≥5 lønsedler pr erfaringsniveau
+                    </h2>
+                    <div class="h-96 space-y-2 overflow-y-auto">
+                        <div
+                            v-for="(item, index) in jobTitlesWith5PlusPayslipsPerExperienceRangeList"
+                            :key="`${item.jobTitle}-${item.experienceRange}-${index}`"
+                            class="flex items-center justify-between rounded-lg border border-sidebar-border/50 bg-sidebar/50 px-4 py-3 transition-colors hover:bg-sidebar/80"
+                        >
+                            <div class="flex flex-col">
+                                <span class="font-medium text-foreground">
+                                    {{ item.jobTitle }}
+                                </span>
+                                <span class="text-sm text-muted-foreground">
+                                    {{ item.experienceRange }}
+                                </span>
+                            </div>
+                            <span
+                                class="rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+                            >
+                                {{ item.count }}
+                            </span>
+                        </div>
+                        <div
+                            v-if="jobTitlesWith5PlusPayslipsPerExperienceRangeList.length === 0"
+                            class="py-8 text-center text-muted-foreground"
+                        >
+                            Ingen jobtitler fundet
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jobtitler med 3+ jobopslag pr erfaringsniveau -->
+                <div
+                    class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar"
+                >
+                    <h2
+                        class="mb-4 text-lg font-semibold text-foreground"
+                    >
+                        Jobtitler med ≥3 jobopslag pr erfaringsniveau
+                    </h2>
+                    <div class="h-96 space-y-2 overflow-y-auto">
+                        <div
+                            v-for="(item, index) in jobTitlesWith5PlusJobPostingsPerExperienceRangeList"
+                            :key="`${item.jobTitle}-${item.experienceRange}-${index}`"
+                            class="flex items-center justify-between rounded-lg border border-sidebar-border/50 bg-sidebar/50 px-4 py-3 transition-colors hover:bg-sidebar/80"
+                        >
+                            <div class="flex flex-col">
+                                <span class="font-medium text-foreground">
+                                    {{ item.jobTitle }}
+                                </span>
+                                <span class="text-sm text-muted-foreground">
+                                    {{ item.experienceRange }}
+                                </span>
+                            </div>
+                            <span
+                                class="rounded-full bg-pink-100 px-3 py-1 text-sm font-semibold text-pink-700 dark:bg-pink-900/30 dark:text-pink-300"
+                            >
+                                {{ item.count }}
+                            </span>
+                        </div>
+                        <div
+                            v-if="jobTitlesWith5PlusJobPostingsPerExperienceRangeList.length === 0"
+                            class="py-8 text-center text-muted-foreground"
+                        >
+                            Ingen jobtitler fundet
                         </div>
                     </div>
                 </div>

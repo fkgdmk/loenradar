@@ -20,6 +20,7 @@ import {
 interface Option {
   value: string | number
   label: string
+  searchText?: string // Optional field for search - if not provided, uses label
 }
 
 interface Props {
@@ -52,9 +53,10 @@ const selectedOption = computed(() =>
 const filteredOptions = computed(() => {
   if (!searchTerm.value) return props.options
   const search = searchTerm.value.toLowerCase()
-  return props.options.filter(option =>
-    option.label.toLowerCase().includes(search),
-  )
+  return props.options.filter(option => {
+    const searchText = option.searchText ?? option.label
+    return searchText.toLowerCase().includes(search)
+  })
 })
 
 function selectOption(selectedValue: string | number) {

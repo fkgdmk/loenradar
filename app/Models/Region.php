@@ -15,6 +15,7 @@ class Region extends Model
      */
     protected $fillable = [
         'name',
+        'statistical_group',
     ];
 
     /**

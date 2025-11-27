@@ -30,7 +30,7 @@ class ReportsController extends Controller
             ->map(function ($report) {
                 return [
                     'id' => $report->id,
-                    'job_title' => $report->jobTitle?->name,
+                    'job_title' => $report->jobTitle?->name_en,
                     'sub_job_title' => $report->sub_job_title,
                     'experience' => $report->experience,
                     'region' => $report->region?->name,
@@ -54,11 +54,12 @@ class ReportsController extends Controller
     public function create(Request $request): Response
     {
         $jobTitles = JobTitle::with('skills:id')
-            ->orderBy('name')
+            ->orderBy('name_en')
             ->get()
             ->map(fn($jt) => [
                 'id' => $jt->id,
                 'name' => $jt->name,
+                'name_en' => $jt->name_en,
                 'skill_ids' => $jt->skills->pluck('id')->values()->all(),
             ]);
 
@@ -114,9 +115,15 @@ class ReportsController extends Controller
             $responsibilityLevelId = $report->uploadedPayslip?->responsibility_level_id;
             
             // Bestem step baseret på data
+            // Step 1: job_title, region, experience udfyldt
+            // Step 2: responsibility_level_id udfyldt
+            // Step 3: ready for submission (responsibility_level_id er sat)
             $step = 1;
-            if ($responsibilityLevelId) {
-                $step = count($skillIds) >= 3 ? 3 : 2;
+            if ($report->job_title_id && $report->region_id && $report->experience !== null) {
+                $step = 2;
+                if ($responsibilityLevelId) {
+                    $step = 3;
+                }
             }
 
             // Hent dokument fra payslip
@@ -174,6 +181,20 @@ class ReportsController extends Controller
             'experience' => 'required|integer|min:0|max:50',
             'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
             'region_id' => 'required|exists:regions,id',
+        ], [
+            'document.required' => 'Felt er påkrævet',
+            'document.file' => 'Dokumentet skal være en fil',
+            'document.mimes' => 'Dokumentet skal være en PDF eller et billede (JPG, PNG, WEBP)',
+            'document.max' => 'Dokumentet må maksimalt være 10MB',
+            'job_title_id.required' => 'Felt er påkrævet',
+            'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
+            'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
+            'experience.required' => 'Felt er påkrævet',
+            'experience.integer' => 'Erfaring skal være et heltal',
+            'experience.min' => 'Erfaring skal være mindst 0 år',
+            'experience.max' => 'Erfaring må maksimalt være 50 år',
+            'region_id.required' => 'Felt er påkrævet',
+            'region_id.exists' => 'Den valgte region er ugyldig',
         ]);
 
         // Normaliser gender til at have caps på første bogstav, eller null hvis tom
@@ -221,7 +242,7 @@ class ReportsController extends Controller
 
             DB::commit();
 
-            return Inertia::location(route('reports.create', ['report_id' => $report->id]));
+            return redirect()->route('reports.create', ['report_id' => $report->id]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af lønsedlen.']);
@@ -233,17 +254,22 @@ class ReportsController extends Controller
      */
     public function updateStep1(Request $request, Report $report)
     {
-        // Tjek at reporten tilhører brugeren og er draft
-        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
-            abort(403);
-        }
-
         $validated = $request->validate([
             'job_title_id' => 'required|exists:job_titles,id',
             'area_of_responsibility_id' => 'nullable|exists:area_of_responsibilities,id',
             'experience' => 'required|integer|min:0|max:50',
             'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
             'region_id' => 'required|exists:regions,id',
+        ], [
+            'job_title_id.required' => 'Felt er påkrævet',
+            'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
+            'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
+            'experience.required' => 'Felt er påkrævet',
+            'experience.integer' => 'Erfaring skal være et heltal',
+            'experience.min' => 'Erfaring skal være mindst 0 år',
+            'experience.max' => 'Erfaring må maksimalt være 50 år',
+            'region_id.required' => 'Felt er påkrævet',
+            'region_id.exists' => 'Den valgte region er ugyldig',
         ]);
 
         // Normaliser gender til at have caps på første bogstav, eller null hvis tom
@@ -281,7 +307,7 @@ class ReportsController extends Controller
 
             DB::commit();
 
-            return Inertia::location(route('reports.create', ['report_id' => $report->id]));
+            return redirect()->route('reports.create', ['report_id' => $report->id]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Der opstod en fejl ved opdatering af data.']);
@@ -293,10 +319,6 @@ class ReportsController extends Controller
      */
     public function updateStep2(Request $request, Report $report)
     {
-        // Tjek at reporten tilhører brugeren og er draft
-        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
-            abort(403);
-        }
 
         $validated = $request->validate([
             'responsibility_level_id' => 'required|exists:responsibility_levels,id',
@@ -328,7 +350,7 @@ class ReportsController extends Controller
 
             DB::commit();
 
-            return Inertia::location(route('reports.create', ['report_id' => $report->id]));
+            return redirect()->route('reports.create', ['report_id' => $report->id]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Der opstod en fejl ved opdatering af data.']);
@@ -456,16 +478,13 @@ class ReportsController extends Controller
 
     private function getExperienceRange($years)
     {
-        if ($years <= 5) {
-            return [0, 5];
+        if ($years <= 3) {
+            return [0, 3];
         }
-        if ($years <= 11) {
-            return [6, 11];
+        if ($years <= 9) {
+            return [4, 9];
         }
-        if ($years <= 20) {
-            return [12, 20];
-        }
-        return [21, 100];
+        return [10, 100]; // 10+ år
     }
 
     private function calculatePercentile($sortedData, $percentile)

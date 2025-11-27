@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Combobox } from '@/components/ui/combobox';
+import InputError from '@/components/InputError.vue';
 import { dashboard } from '@/routes';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import { 
     Upload, 
     FileText, 
@@ -27,6 +28,7 @@ import {
 interface JobTitle {
     id: number;
     name: string;
+    name_en: string;
     skill_ids: number[];
 }
 
@@ -130,6 +132,15 @@ const regionSearch = ref('');
 const responsibilityLevelSearch = ref('');
 const skillSearch = ref('');
 
+// Validation errors for step 1
+const step1Errors = reactive<Record<string, string>>({
+    document: '',
+    job_title_id: '',
+    area_of_responsibility_id: '',
+    experience: '',
+    region_id: '',
+});
+
 // Normaliser gender ved initialisering
 const initialGender = props.report?.gender && props.report.gender.trim() !== '' 
     ? props.report.gender 
@@ -184,7 +195,7 @@ const formatFileSize = (sizeInBytes: number | null | undefined) => {
 const showAreaOfResponsibility = computed(() => {
     if (!form.job_title_id) return false;
     const selectedJobTitle = props.job_titles.find(jt => jt.id === form.job_title_id);
-    return selectedJobTitle ? props.leadership_roles.includes(selectedJobTitle.name) : false;
+    return selectedJobTitle ? props.leadership_roles.includes(selectedJobTitle.name_en) : false;
 });
 
 const selectedJobTitle = computed(() => {
@@ -224,7 +235,6 @@ const isStep2Valid = computed(() => {
     );
 });
 
-const canProceedToStep2 = computed(() => isStep1Valid.value);
 const canProceedToStep3 = computed(() => isStep2Valid.value);
 
 // Tjek om steps er udfyldt for navigation
@@ -310,8 +320,30 @@ const toggleSkill = (skillId: number) => {
     form.skill_ids = selectedSkills.value;
 };
 
+// Funktion til at rydde step 1 fejl
+const clearStep1Errors = () => {
+    step1Errors.document = '';
+    step1Errors.job_title_id = '';
+    step1Errors.area_of_responsibility_id = '';
+    step1Errors.experience = '';
+    step1Errors.region_id = '';
+};
+
+// Funktion til at sætte step 1 fejl fra backend
+const setStep1Errors = (errors: Record<string, string>) => {
+    clearStep1Errors();
+    if (errors.document) step1Errors.document = errors.document;
+    if (errors.job_title_id) step1Errors.job_title_id = errors.job_title_id;
+    if (errors.area_of_responsibility_id) step1Errors.area_of_responsibility_id = errors.area_of_responsibility_id;
+    if (errors.experience) step1Errors.experience = errors.experience;
+    if (errors.region_id) step1Errors.region_id = errors.region_id;
+};
+
 const nextStep = async () => {
-    if (currentStep.value === 1 && canProceedToStep2.value) {
+    if (currentStep.value === 1) {
+        // Ryd tidligere fejl
+        clearStep1Errors();
+        
         // Normaliser gender: konverter tom streng til null
         const normalizedGender = form.gender && form.gender.trim() !== '' ? form.gender : null;
         
@@ -326,15 +358,13 @@ const nextStep = async () => {
             });
 
             step1Form.patch(`/reports/${reportId.value}/step1`, {
-                preserveScroll: false,
+                preserveScroll: true,
                 onSuccess: () => {
                     // Gå til step 2 efter succesfuld opdatering
                     currentStep.value = 2;
                 },
-                onError: (errors: any) => {
-                    console.error('Fejl ved opdatering:', errors);
-                    console.log('Valideringsfejl:', errors.errors);
-                    alert('Der opstod en fejl ved opdatering. Tjek venligst alle felter og prøv igen.');
+                onError: (errors: Record<string, string>) => {
+                    setStep1Errors(errors);
                 },
             });
             return;
@@ -352,15 +382,13 @@ const nextStep = async () => {
 
         step1Form.post('/reports/payslip', {
             forceFormData: true,
-            preserveScroll: false,
+            preserveScroll: true,
             onSuccess: () => {
                 // Inertia vil automatisk reload siden med den nye URL og report data
                 // Watch på props.report vil automatisk opdatere step til 2 når data er klar
             },
-            onError: (errors: any) => {
-                console.error('Fejl ved gemning:', errors);
-                console.log('Valideringsfejl:', errors.errors);
-                alert('Der opstod en fejl ved gemning. Tjek venligst alle felter og prøv igen.');
+            onError: (errors: Record<string, string>) => {
+                setStep1Errors(errors);
             },
         });
     } else if (currentStep.value === 2 && canProceedToStep3.value) {
@@ -417,7 +445,7 @@ const submitForm = () => {
 
 const getJobTitleName = (id: number | null) => {
     if (!id) return '';
-    return props.job_titles.find(jt => jt.id === id)?.name || '';
+    return props.job_titles.find(jt => jt.id === id)?.name_en || '';
 };
 
 const getRegionName = (id: number | null) => {
@@ -507,7 +535,11 @@ watch(() => form.gender, (newValue) => {
 
 // Computed options for comboboxes
 const jobTitleOptions = computed(() => 
-    props.job_titles.map(jt => ({ value: jt.id, label: jt.name }))
+    props.job_titles.map(jt => ({ 
+        value: jt.id, 
+        label: jt.name_en,
+        searchText: `${jt.name} ${jt.name_en}` // Søg i både name og name_en
+    }))
 );
 
 const areaOfResponsibilityOptions = computed(() => 
@@ -696,6 +728,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 <p class="mt-2 text-xs text-muted-foreground">
                                     Maksimal størrelse: 10MB. Filen skal være anonymiseret.
                                 </p>
+                                <InputError :message="step1Errors.document" />
                             </div>
                         </div>
 
@@ -714,6 +747,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 search-placeholder="Søg efter jobtitel..."
                                 empty-text="Ingen jobtitler fundet"
                             />
+                            <InputError :message="step1Errors.job_title_id" />
                         </div>
 
                         <!-- Area of Responsibility (conditional) -->
@@ -726,6 +760,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 search-placeholder="Søg efter område..."
                                 empty-text="Ingen områder fundet"
                             />
+                            <InputError :message="step1Errors.area_of_responsibility_id" />
                         </div>
 
                         <!-- Experience -->
@@ -738,26 +773,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 max="50"
                                 placeholder="fx. 5"
                             />
-                        </div>
-
-                        <!-- Gender -->
-                        <div>
-                            <Label class="mb-2 flex items-center gap-2">
-                                <User class="h-4 w-4" />
-                                Køn (valgfrit)
-                            </Label>
-                            <select
-                                v-model="form.gender"
-                                class="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            >
-                                <option :value="null">Vælg køn</option>
-                                <option value="Mand">Mand</option>
-                                <option value="Kvinde">Kvinde</option>
-                                <option value="Andet">Andet</option>
-                            </select>
-                            <p v-if="form.gender" class="mt-1 text-xs text-muted-foreground">
-                                Valgt: {{ form.gender }}
-                            </p>
+                            <InputError :message="step1Errors.experience" />
                         </div>
 
                         <!-- Region -->
@@ -773,6 +789,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 search-placeholder="Søg efter region..."
                                 empty-text="Ingen regioner fundet"
                             />
+                            <InputError :message="step1Errors.region_id" />
                         </div>
                     </div>
 
@@ -911,7 +928,7 @@ sanitizeSelectedSkillsForJobTitle();
                             <Button
                                 v-if="currentStep < 3"
                                 type="button"
-                                :disabled="currentStep === 1 && !canProceedToStep2 || currentStep === 2 && !canProceedToStep3"
+                                :disabled="currentStep === 2 && !canProceedToStep3"
                                 @click="nextStep"
                             >
                                 Næste

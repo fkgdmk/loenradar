@@ -48,6 +48,7 @@ interface ProsaJobCategory {
 interface JobTitle {
     id: number;
     name: string;
+    name_en: string;
     prosa_categories: ProsaJobCategory[];
 }
 
@@ -353,60 +354,6 @@ const isSkillMatching = (skillId: number): boolean => {
                             </div>
                         </CardContent>
                     </Card>
-
-                    <!-- Prosa Stats Card -->
-                    <Card v-if="relevantProsaStats.length > 0">
-                        <CardHeader>
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>Fagforenings Statistik (PROSA)</CardTitle>
-                                    <CardDescription>
-                                        Lønstatistik for {{ report.job_title.prosa_categories[0].category_name }}
-                                    </CardDescription>
-                                </div>
-                                <a href="https://www.prosa.dk/raad-og-svar/loenstatistik" target="_blank" rel="noopener noreferrer">
-                                    <Button variant="ghost" size="sm">
-                                        Kilde <ExternalLink class="ml-2 h-4 w-4" />
-                                    </Button>
-                                </a>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="rounded-md border">
-                                <table class="w-full text-sm">
-                                    <thead class="border-b bg-muted/50">
-                                        <tr>
-                                            <th class="p-3 text-left font-medium">Erfaring</th>
-                                            <th class="p-3 text-right font-medium">Nedre Kvartil</th>
-                                            <th class="p-3 text-right font-medium">Median</th>
-                                            <th class="p-3 text-right font-medium">Øvre Kvartil</th>
-                                            <th class="p-3 text-right font-medium">Gns.</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr 
-                                            v-for="stat in relevantProsaStats" 
-                                            :key="stat.id" 
-                                            class="border-b last:border-0"
-                                            :class="isStatRelevant(stat) ? 'bg-primary/10 font-medium' : 'hover:bg-muted/50 text-muted-foreground'"
-                                        >
-                                            <td class="p-3">
-                                                {{ stat.experience_from }} - {{ stat.experience_to }} år
-                                                <span v-if="isStatRelevant(stat)" class="ml-2 text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">Dig</span>
-                                            </td>
-                                            <td class="p-3 text-right">{{ formatCurrency(stat.lower_quartile_salary) }}</td>
-                                            <td class="p-3 text-right">{{ formatCurrency(stat.median_salary) }}</td>
-                                            <td class="p-3 text-right">{{ formatCurrency(stat.upper_quartile_salary) }}</td>
-                                            <td class="p-3 text-right">{{ formatCurrency(stat.average_salary) }}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <p class="mt-4 text-xs text-muted-foreground">
-                                Data er baseret på PROSA's lønstatistik. Markeret række viser intervallet der matcher din erfaring.
-                            </p>
-                        </CardContent>
-                    </Card>
                 </div>
 
                 <!-- Sidebar Details -->
@@ -418,7 +365,7 @@ const isSkillMatching = (skillId: number): boolean => {
                         <CardContent class="space-y-4">
                             <div>
                                 <div class="text-sm text-muted-foreground">Jobtitel</div>
-                                <div class="font-medium">{{ report.job_title.name }}</div>
+                                <div class="font-medium">{{ report.job_title.name_en }}</div>
                             </div>
                             
                             <div v-if="report.area_of_responsibility">
@@ -461,6 +408,60 @@ const isSkillMatching = (skillId: number): boolean => {
                     </Card>
                 </div>
             </div>
+
+            <!-- Prosa Stats Card -->
+            <Card v-if="relevantProsaStats.length > 0">
+                <CardHeader>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Fagforenings Statistik (PROSA)</CardTitle>
+                            <CardDescription>
+                                Lønstatistik for {{ report.job_title.prosa_categories[0].category_name }}
+                            </CardDescription>
+                        </div>
+                        <a href="https://www.prosa.dk/raad-og-svar/loenstatistik" target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="sm">
+                                Kilde <ExternalLink class="ml-2 h-4 w-4" />
+                            </Button>
+                        </a>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div class="rounded-md border">
+                        <table class="w-full text-sm">
+                            <thead class="border-b bg-muted/50">
+                                <tr>
+                                    <th class="p-3 text-left font-medium">Erfaring</th>
+                                    <th class="p-3 text-right font-medium">Nedre Kvartil</th>
+                                    <th class="p-3 text-right font-medium">Median</th>
+                                    <th class="p-3 text-right font-medium">Øvre Kvartil</th>
+                                    <th class="p-3 text-right font-medium">Gns.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr 
+                                    v-for="stat in relevantProsaStats" 
+                                    :key="stat.id" 
+                                    class="border-b last:border-0"
+                                    :class="isStatRelevant(stat) ? 'bg-primary/10 font-medium' : 'hover:bg-muted/50 text-muted-foreground'"
+                                >
+                                    <td class="p-3">
+                                        {{ stat.experience_from }} - {{ stat.experience_to }} år
+                                        <span v-if="isStatRelevant(stat)" class="ml-2 text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">Dig</span>
+                                    </td>
+                                    <td class="p-3 text-right">{{ formatCurrency(stat.lower_quartile_salary) }}</td>
+                                    <td class="p-3 text-right">{{ formatCurrency(stat.median_salary) }}</td>
+                                    <td class="p-3 text-right">{{ formatCurrency(stat.upper_quartile_salary) }}</td>
+                                    <td class="p-3 text-right">{{ formatCurrency(stat.average_salary) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-4 text-xs text-muted-foreground">
+                        Data er baseret på PROSA's lønstatistik. Markeret række viser intervallet der matcher din erfaring.
+                    </p>
+                </CardContent>
+            </Card>
 
             <!-- Job Postings Card -->
             <Card v-if="report.job_postings && report.job_postings.length > 0">

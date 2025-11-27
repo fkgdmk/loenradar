@@ -115,10 +115,7 @@ class ExtractJobTitles extends Command
                     $successCount++;
                     $this->newLine();
                     $this->line("  Job titel: {$extractedData['job_title']->name}");
-                    
-                    if ($extractedData['sub_job_title']) {
-                        $this->line("  Sub titel: {$extractedData['sub_job_title']}");
-                    }
+            
                     
                     if ($extractedData['experience']) {
                         $this->line("  Erfaring: {$extractedData['experience']} år");

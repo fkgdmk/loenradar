@@ -36,6 +36,10 @@ class Payslip extends Model implements HasMedia
         'responsibility_level_id',
         'team_size',
         'gender',
+        'company_pension_dkk',
+        'company_pension_procent',
+        'salary_supplement',
+        'hours_monthly',
     ];
 
     /**
@@ -48,6 +52,7 @@ class Payslip extends Model implements HasMedia
         'verified_at' => 'datetime',
         'denied_at' => 'datetime',
         'comments' => 'array',
+        'company_pension_procent' => 'decimal:2',
     ];
 
     /**

@@ -91,76 +91,81 @@ const formatCurrency = (value: number | null): string => {
                 v-else
                 class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
             >
-                <Card
+                <Link
                     v-for="report in props.reports"
                     :key="report.id"
-                    class="hover:shadow-md transition-shadow flex flex-col"
+                    :href="`/reports/${report.id}`"
+                    class="block"
                 >
-                    <CardHeader>
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <CardTitle class="text-lg mb-2">
-                                    {{ report.job_title || 'Ukendt jobtitel' }}
-                                </CardTitle>
+                    <Card
+                        class="hover:shadow-md transition-shadow flex flex-col cursor-pointer"
+                    >
+                        <CardHeader>
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <CardTitle class="text-lg mb-2">
+                                        {{ report.job_title || 'Ukendt jobtitel' }}
+                                    </CardTitle>
+                                </div>
                             </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent class="flex flex-col flex-1 space-y-4">
-                        <!-- Region og Erfaring -->
-                        <div class="flex flex-wrap gap-2">
-                            <Badge
-                                v-if="report.region"
-                                variant="secondary"
-                                class="flex items-center gap-1"
-                            >
-                                <MapPin class="h-3 w-3" />
-                                {{ report.region }}
-                            </Badge>
-                            <Badge
-                                v-if="report.experience !== null"
-                                variant="secondary"
-                            >
-                                {{ report.experience }} års erfaring
-                            </Badge>
-                            <Badge
-                                v-if="report.area_of_responsibility"
-                                variant="secondary"
-                            >
-                                {{ report.area_of_responsibility }}
-                            </Badge>
-                        </div>
+                        </CardHeader>
+                        <CardContent class="flex flex-col flex-1 space-y-4">
+                            <!-- Region og Erfaring -->
+                            <div class="flex flex-wrap gap-2">
+                                <Badge
+                                    v-if="report.region"
+                                    variant="secondary"
+                                    class="flex items-center gap-1"
+                                >
+                                    <MapPin class="h-3 w-3" />
+                                    {{ report.region }}
+                                </Badge>
+                                <Badge
+                                    v-if="report.experience !== null"
+                                    variant="secondary"
+                                >
+                                    {{ report.experience }} års erfaring
+                                </Badge>
+                                <Badge
+                                    v-if="report.area_of_responsibility"
+                                    variant="secondary"
+                                >
+                                    {{ report.area_of_responsibility }}
+                                </Badge>
+                            </div>
 
-                        <!-- Lønstatistikker -->
-                        <div class="space-y-2 border-t pt-4">
-                            <div class="flex items-center justify-between text-sm">
-                                <span class="text-muted-foreground">Median løn:</span>
-                                <span class="font-semibold text-foreground">
-                                    {{ formatCurrency(report.median) }}
-                                </span>
+                            <!-- Lønstatistikker -->
+                            <div class="space-y-2 border-t pt-4">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-muted-foreground">Median løn:</span>
+                                    <span class="font-semibold text-foreground">
+                                        {{ formatCurrency(report.median) }}
+                                    </span>
+                                </div>
+                                <div
+                                    v-if="report.lower_percentile || report.upper_percentile"
+                                    class="flex items-center gap-2 text-xs text-muted-foreground"
+                                >
+                                    <span v-if="report.lower_percentile">
+                                        {{ formatCurrency(report.lower_percentile) }}
+                                    </span>
+                                    <TrendingUp class="h-3 w-3" />
+                                    <span v-if="report.upper_percentile">
+                                        {{ formatCurrency(report.upper_percentile) }}
+                                    </span>
+                                </div>
                             </div>
-                            <div
-                                v-if="report.lower_percentile || report.upper_percentile"
-                                class="flex items-center gap-2 text-xs text-muted-foreground"
-                            >
-                                <span v-if="report.lower_percentile">
-                                    {{ formatCurrency(report.lower_percentile) }}
-                                </span>
-                                <TrendingUp class="h-3 w-3" />
-                                <span v-if="report.upper_percentile">
-                                    {{ formatCurrency(report.upper_percentile) }}
-                                </span>
-                            </div>
-                        </div>
 
-                        <!-- Oprettelsesdato -->
-                        <div class="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4 mt-auto">
-                            <Calendar class="h-3 w-3" />
-                            <span>
-                                Oprettet {{ new Date(report.created_at).toLocaleDateString('da-DK') }}
-                            </span>
-                        </div>
-                    </CardContent>
-                </Card>
+                            <!-- Oprettelsesdato -->
+                            <div class="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4 mt-auto">
+                                <Calendar class="h-3 w-3" />
+                                <span>
+                                    Oprettet {{ new Date(report.created_at).toLocaleDateString('da-DK') }}
+                                </span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </Link>
             </div>
         </div>
     </AppLayout>

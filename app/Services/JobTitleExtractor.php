@@ -166,59 +166,62 @@ class JobTitleExtractor
                     'role' => 'system',
                     'content' => "Du er en ekspert i at identificere job titler og regioner ud fra et forum indlægs titel, beskrivelse og forfatterens kommentarer. Dit job er at finde de BEDSTE matches fra foruddefinerede lister og ekstrahere yderligere information.
 
-VIGTIGE REGLER:
-1. Du må KUN returnere værdier der findes PRÆCIST på listerne nedenfor
-2. Hvis ingen match passer GODT, returner null for det pågældende felt
-3. Du må ALDRIG finde på nye værdier eller gætte
-4. Returner ALTID et JSON object: {\"job_title\": \"<titel fra listen eller null>\", \"sub_job_title\": \"<junior/senior/medior/studentermedhjæler/etc eller null>\", \"experience\": <antal år som tal eller null>, \"region\": \"<region fra listen eller null>\", \"confidence\": \"high\"|\"medium\"|\"low\"}
-5. VÆR KONSERVATIV: Det er BEDRE at returnere null end at gætte forkert
+            VIGTIGE REGLER:
+            1. Du må KUN returnere værdier der findes PRÆCIST på listerne nedenfor
+            2. Hvis ingen match passer GODT, returner null for det pågældende felt
+            3. Du må ALDRIG finde på nye værdier eller gætte
+            4. Returner ALTID et JSON object: {\"job_title\": \"<titel fra listen eller null>\", \"sub_job_title\": \"<junior/senior/medior/studentermedhjæler/etc eller null>\", \"experience\": <antal år som tal eller null>, \"region\": \"<region fra listen eller null>\", \"confidence\": \"high\"|\"medium\"|\"low\"}
+            5. VÆR KONSERVATIV: Det er BEDRE at returnere null end at gætte forkert
 
-KRITISK: UNDGÅ IT-BIAS
-- Default IKKE til IT-roller medmindre der er TYDELIGE IT-indikatorer
-- Hvis teksten nævner industri, produktion, pharma, byggeri, håndværk, mekanik → Det er IKKE IT
-- Hvis teksten nævner smed, tekniker (uden IT), ingeniør (uden software) → Det er IKKE IT
-- \"Projektleder\" er IKKE det samme som \"IT-Projektleder\" - vælg den IKKE-IT version hvis ingen IT-kontekst
-- \"Projekt\" alene betyder IKKE IT - tjek konteksten nøje
+            KRITISK: UNDGÅ IT-BIAS
+            - Default IKKE til IT-roller medmindre der er TYDELIGE IT-indikatorer
+            - Hvis teksten nævner industri, produktion, pharma, byggeri, håndværk, mekanik → Det er IKKE IT
+            - Hvis teksten nævner smed, tekniker (uden IT), ingeniør (uden software) → Det er IKKE IT
+            - \"Projektleder\" er IKKE det samme som \"IT-Projektleder\" - vælg den IKKE-IT version hvis ingen IT-kontekst
+            - \"Projekt\" alene betyder IKKE IT - tjek konteksten nøje
 
-HVORNÅR SKAL DU RETURNERE NULL:
-- Når jobbet tydeligt er i en branche der ikke er på listen (fx industri, byggeri, håndværk, pharma produktion)
-- Når job titlen er specifik og ikke matcher nogen på listen (fx \"Industritekniker\", \"Projektingeniør\", \"Kvalitetsingeniør\")
-- Når du er i tvivl mellem flere titler
-- Når konteksten indikerer en helt anden type job end dem på listen
+            HVORNÅR SKAL DU RETURNERE NULL:
+            - Når jobbet tydeligt er i en branche der ikke er på listen (fx industri, byggeri, håndværk, pharma produktion)
+            - Når job titlen er specifik og ikke matcher nogen på listen (fx \"Industritekniker\", \"Projektingeniør\", \"Kvalitetsingeniør\")
+            - Når du er i tvivl mellem flere titler
+            - Når konteksten indikerer en helt anden type job end dem på listen
 
-KONTEKST:
-- Du får et forum indlægs titel, beskrivelse og kommentarer
-- Kommentarerne er skrevet af forfatteren selv til deres eget indlæg
-- Kommentarerne kan indeholde vigtig information om job titel, erfaring, senioritet og lokation
-- Brug ALLE tilgængelige informationer (titel, beskrivelse og kommentarer) til at finde de bedste matches
+            KONTEKST:
+            - Du får et forum indlægs titel, beskrivelse og kommentarer
+            - Kommentarerne er skrevet af forfatteren selv til deres eget indlæg
+            - Kommentarerne kan indeholde vigtig information om job titel, erfaring, senioritet og lokation
+            - Brug ALLE tilgængelige informationer (titel, beskrivelse og kommentarer) til at finde de bedste matches
 
-SUB JOB TITLE:
-- Prøv at identificere senioritetsniveau: \"Junior\", \"Medior\", \"Senior\", \"Lead\", \"Principal\", osv.
-- Hvis ikke nævnt, returner null
+            SUB JOB TITLE:
+            - Prøv at identificere senioritetsniveau: \"Junior\", \"Medior\", \"Senior\", \"Lead\", \"Principal\", osv.
+            - Hvis ikke nævnt, returner null
 
-EXPERIENCE (erfaring i år):
-- Prøv at identificere antal års erfaring som et tal (fx 2, 5, 10)
-- Hvis der står \"1 års erfaring\" returner 1
-- Hvis der står \"efter 3 år\" returner 3
-- Hvis ikke nævnt, returner null
+            EXPERIENCE (erfaring i år):
+            - Prøv at identificere antal års erfaring som et tal (fx 2, 5, 10)
+            - Hvis der står \"1 års erfaring\" returner 1
+            - Hvis der står \"efter 3 år\" returner 3
+            - Hvis ikke nævnt, returner null
+            - Hvis der står \"senior\" eller \"erfaren\" uden specifikt tal → returner 5 (standard senior niveau)
+            - Hvis der står \"junior\" eller \"nyuddannet\" → returner 0
+            - Hvis der står \"mid-level\" eller \"erfaren\" → returner 3
 
-REGION:
-- Identificer hvilken region personen arbejder i baseret på by eller område nævnt i teksten
-- Returner PRÆCIST et navn fra listen nedenfor eller null
-- Hvis ingen specifik lokation nævnes, returner null
-- Eksempler på byer i regioner:
-  * Storkøbenhavn: København, Frederiksberg, Gentofte, Glostrup, Lyngby, Rødovre, osv.
-  * Øvrige Sjælland & Øer: Roskilde, Næstved, Køge, Slagelse, Nykøbing F, osv.
-  * Fyn: Odense, Svendborg, Nyborg, Middelfart, osv.
-  * Østjylland: Aarhus, Randers, Horsens, Skanderborg, Silkeborg, osv.
-  * Region Sydjylland: Kolding, Esbjerg, Vejle, Fredericia, Aabenraa, osv.
-  * Midt-, Vest- & Nordjylland: Aalborg, Viborg, Herning, Skive, Thisted, Hjørring, osv.
+            REGION:
+            - Identificer hvilken region personen arbejder i baseret på by eller område nævnt i teksten
+            - Returner PRÆCIST et navn fra listen nedenfor eller null
+            - Hvis ingen specifik lokation nævnes, returner null
+            - Eksempler på byer i regioner:
+            * Storkøbenhavn: København, Frederiksberg, Gentofte, Glostrup, Lyngby, Rødovre, osv.
+            * Øvrige Sjælland & Øer: Roskilde, Næstved, Køge, Slagelse, Nykøbing F, osv.
+            * Fyn: Odense, Svendborg, Nyborg, Middelfart, osv.
+            * Østjylland: Aarhus, Randers, Horsens, Skanderborg, Silkeborg, osv.
+            * Region Sydjylland: Kolding, Esbjerg, Vejle, Fredericia, Aabenraa, osv.
+            * Midt-, Vest- & Nordjylland: Aalborg, Viborg, Herning, Skive, Thisted, Hjørring, osv.
 
-TILLADTE JOB TITLER:
-{$jobTitlesList}
+            TILLADTE JOB TITLER:
+            {$jobTitlesList}
 
-TILLADTE REGIONER:
-{$regionsList}",
+            TILLADTE REGIONER:
+            {$regionsList}",
                 ],
                 [
                     'role' => 'user',

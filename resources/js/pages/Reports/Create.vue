@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,24 +9,26 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Combobox } from '@/components/ui/combobox';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertCircle } from 'lucide-vue-next';
+import InputError from '@/components/InputError.vue';
 import { dashboard } from '@/routes';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import { 
     Upload, 
     FileText, 
     Briefcase, 
     MapPin, 
-    User, 
     ChevronRight, 
     ChevronLeft,
     Check,
     X,
-    Edit,
     Sparkles
 } from 'lucide-vue-next';
 interface JobTitle {
     id: number;
     name: string;
+    name_en: string;
     skill_ids: number[];
 }
 
@@ -104,6 +106,10 @@ const urlParams = new URLSearchParams(window.location.search);
 const urlReportId = urlParams.get('report_id');
 const reportId = ref<number | null>(props.report?.id ?? (urlReportId ? parseInt(urlReportId) : null));
 
+// Payslip warning state
+const payslipWarning = ref<string | null>(null);
+const showPayslipWarningModal = ref(false);
+
 // Bestem step baseret på report data
 const initialStep = computed(() => {
     if (props.report?.step) {
@@ -129,6 +135,15 @@ const areaOfResponsibilitySearch = ref('');
 const regionSearch = ref('');
 const responsibilityLevelSearch = ref('');
 const skillSearch = ref('');
+
+// Validation errors for step 1
+const step1Errors = reactive<Record<string, string>>({
+    document: '',
+    job_title_id: '',
+    area_of_responsibility_id: '',
+    experience: '',
+    region_id: '',
+});
 
 // Normaliser gender ved initialisering
 const initialGender = props.report?.gender && props.report.gender.trim() !== '' 
@@ -184,7 +199,7 @@ const formatFileSize = (sizeInBytes: number | null | undefined) => {
 const showAreaOfResponsibility = computed(() => {
     if (!form.job_title_id) return false;
     const selectedJobTitle = props.job_titles.find(jt => jt.id === form.job_title_id);
-    return selectedJobTitle ? props.leadership_roles.includes(selectedJobTitle.name) : false;
+    return selectedJobTitle ? props.leadership_roles.includes(selectedJobTitle.name_en) : false;
 });
 
 const selectedJobTitle = computed(() => {
@@ -224,7 +239,6 @@ const isStep2Valid = computed(() => {
     );
 });
 
-const canProceedToStep2 = computed(() => isStep1Valid.value);
 const canProceedToStep3 = computed(() => isStep2Valid.value);
 
 // Tjek om steps er udfyldt for navigation
@@ -310,8 +324,30 @@ const toggleSkill = (skillId: number) => {
     form.skill_ids = selectedSkills.value;
 };
 
+// Funktion til at rydde step 1 fejl
+const clearStep1Errors = () => {
+    step1Errors.document = '';
+    step1Errors.job_title_id = '';
+    step1Errors.area_of_responsibility_id = '';
+    step1Errors.experience = '';
+    step1Errors.region_id = '';
+};
+
+// Funktion til at sætte step 1 fejl fra backend
+const setStep1Errors = (errors: Record<string, string>) => {
+    clearStep1Errors();
+    if (errors.document) step1Errors.document = errors.document;
+    if (errors.job_title_id) step1Errors.job_title_id = errors.job_title_id;
+    if (errors.area_of_responsibility_id) step1Errors.area_of_responsibility_id = errors.area_of_responsibility_id;
+    if (errors.experience) step1Errors.experience = errors.experience;
+    if (errors.region_id) step1Errors.region_id = errors.region_id;
+};
+
 const nextStep = async () => {
-    if (currentStep.value === 1 && canProceedToStep2.value) {
+    if (currentStep.value === 1) {
+        // Ryd tidligere fejl
+        clearStep1Errors();
+        
         // Normaliser gender: konverter tom streng til null
         const normalizedGender = form.gender && form.gender.trim() !== '' ? form.gender : null;
         
@@ -326,15 +362,20 @@ const nextStep = async () => {
             });
 
             step1Form.patch(`/reports/${reportId.value}/step1`, {
-                preserveScroll: false,
+                preserveScroll: true,
                 onSuccess: () => {
                     // Gå til step 2 efter succesfuld opdatering
                     currentStep.value = 2;
                 },
-                onError: (errors: any) => {
-                    console.error('Fejl ved opdatering:', errors);
-                    console.log('Valideringsfejl:', errors.errors);
-                    alert('Der opstod en fejl ved opdatering. Tjek venligst alle felter og prøv igen.');
+                onError: (errors: Record<string, string>) => {
+                    // Håndter payslip_warning fejl separat
+                    if (errors.payslip_warning) {
+                        payslipWarning.value = errors.payslip_warning;
+                        showPayslipWarningModal.value = true;
+                        // Fjern payslip_warning fra errors så den ikke vises som normal fejl
+                        delete errors.payslip_warning;
+                    }
+                    setStep1Errors(errors);
                 },
             });
             return;
@@ -352,15 +393,22 @@ const nextStep = async () => {
 
         step1Form.post('/reports/payslip', {
             forceFormData: true,
-            preserveScroll: false,
+            preserveScroll: true,
             onSuccess: () => {
                 // Inertia vil automatisk reload siden med den nye URL og report data
                 // Watch på props.report vil automatisk opdatere step til 2 når data er klar
             },
-            onError: (errors: any) => {
-                console.error('Fejl ved gemning:', errors);
-                console.log('Valideringsfejl:', errors.errors);
-                alert('Der opstod en fejl ved gemning. Tjek venligst alle felter og prøv igen.');
+            onError: (errors: Record<string, string>) => {
+                // Håndter payslip_warning fejl separat
+                if (errors.payslip_warning) {
+                    payslipWarning.value = errors.payslip_warning;
+                    showPayslipWarningModal.value = true;
+                    // Nulstil reportId da report er blevet slettet
+                    reportId.value = null;
+                    // Fjern payslip_warning fra errors så den ikke vises som normal fejl
+                    delete errors.payslip_warning;
+                }
+                setStep1Errors(errors);
             },
         });
     } else if (currentStep.value === 2 && canProceedToStep3.value) {
@@ -417,7 +465,7 @@ const submitForm = () => {
 
 const getJobTitleName = (id: number | null) => {
     if (!id) return '';
-    return props.job_titles.find(jt => jt.id === id)?.name || '';
+    return props.job_titles.find(jt => jt.id === id)?.name_en || '';
 };
 
 const getRegionName = (id: number | null) => {
@@ -507,7 +555,11 @@ watch(() => form.gender, (newValue) => {
 
 // Computed options for comboboxes
 const jobTitleOptions = computed(() => 
-    props.job_titles.map(jt => ({ value: jt.id, label: jt.name }))
+    props.job_titles.map(jt => ({ 
+        value: jt.id, 
+        label: jt.name_en,
+        searchText: `${jt.name} ${jt.name_en}` // Søg i både name og name_en
+    }))
 );
 
 const areaOfResponsibilityOptions = computed(() => 
@@ -531,6 +583,12 @@ const filteredSkills = computed(() => {
 });
 
 sanitizeSelectedSkillsForJobTitle();
+
+// Funktion til at lukke modal
+const closePayslipWarningModal = () => {
+    showPayslipWarningModal.value = false;
+    payslipWarning.value = null;
+};
 </script>
 
 <template>
@@ -696,6 +754,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 <p class="mt-2 text-xs text-muted-foreground">
                                     Maksimal størrelse: 10MB. Filen skal være anonymiseret.
                                 </p>
+                                <InputError :message="step1Errors.document" />
                             </div>
                         </div>
 
@@ -714,6 +773,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 search-placeholder="Søg efter jobtitel..."
                                 empty-text="Ingen jobtitler fundet"
                             />
+                            <InputError :message="step1Errors.job_title_id" />
                         </div>
 
                         <!-- Area of Responsibility (conditional) -->
@@ -726,6 +786,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 search-placeholder="Søg efter område..."
                                 empty-text="Ingen områder fundet"
                             />
+                            <InputError :message="step1Errors.area_of_responsibility_id" />
                         </div>
 
                         <!-- Experience -->
@@ -738,26 +799,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 max="50"
                                 placeholder="fx. 5"
                             />
-                        </div>
-
-                        <!-- Gender -->
-                        <div>
-                            <Label class="mb-2 flex items-center gap-2">
-                                <User class="h-4 w-4" />
-                                Køn (valgfrit)
-                            </Label>
-                            <select
-                                v-model="form.gender"
-                                class="h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            >
-                                <option :value="null">Vælg køn</option>
-                                <option value="Mand">Mand</option>
-                                <option value="Kvinde">Kvinde</option>
-                                <option value="Andet">Andet</option>
-                            </select>
-                            <p v-if="form.gender" class="mt-1 text-xs text-muted-foreground">
-                                Valgt: {{ form.gender }}
-                            </p>
+                            <InputError :message="step1Errors.experience" />
                         </div>
 
                         <!-- Region -->
@@ -773,6 +815,7 @@ sanitizeSelectedSkillsForJobTitle();
                                 search-placeholder="Søg efter region..."
                                 empty-text="Ingen regioner fundet"
                             />
+                            <InputError :message="step1Errors.region_id" />
                         </div>
                     </div>
 
@@ -911,7 +954,7 @@ sanitizeSelectedSkillsForJobTitle();
                             <Button
                                 v-if="currentStep < 3"
                                 type="button"
-                                :disabled="currentStep === 1 && !canProceedToStep2 || currentStep === 2 && !canProceedToStep3"
+                                :disabled="currentStep === 2 && !canProceedToStep3"
                                 @click="nextStep"
                             >
                                 Næste
@@ -931,6 +974,31 @@ sanitizeSelectedSkillsForJobTitle();
                 </CardContent>
             </Card>
         </div>
+
+        <!-- Payslip Warning Modal -->
+        <Dialog :open="showPayslipWarningModal" @update:open="showPayslipWarningModal = $event">
+            <DialogContent class="sm:max-w-xl">
+                <div class="whitespace-pre-line text-base text-white mt-4 mx-4 space-y-2">
+                    <div class="font-bold">
+                        {{payslipWarning}}
+                    </div>
+                    <div>
+                        Det er desværre ikke nok til at kunne lave en værdifuld rapport.
+                    </div>
+                    <div>
+                        Vi arbejder på samle mere data, så vi kan give dig et mere præcist billede af dit lønniveau.
+                    </div>
+                    <div>
+                        Vi kontaker dig lige så snart vi er i mål for din profil!
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button @click="closePayslipWarningModal">
+                        Forstået
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>
 

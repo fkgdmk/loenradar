@@ -15,6 +15,8 @@ class JobTitle extends Model
      */
     protected $fillable = [
         'name',
+        'name_en',
+        'is_active',
     ];
 
     /**
@@ -39,5 +41,13 @@ class JobTitle extends Model
     public function skills(): BelongsToMany
     {
         return $this->belongsToMany(Skill::class, 'job_title_skill', 'job_title_id', 'skill_id');
+    }
+
+    /**
+     * Get all job postings with this job title
+     */
+    public function jobPostings(): HasMany
+    {
+        return $this->hasMany(JobPosting::class);
     }
 }

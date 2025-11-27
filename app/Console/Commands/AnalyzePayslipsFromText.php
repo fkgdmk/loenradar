@@ -40,6 +40,7 @@ class AnalyzePayslipsFromText extends Command
 
         // Byg query - find payslips uden media (ingen billeder)
         $query = Payslip::whereNull('denied_at')
+            ->whereNull('verified_at')
             ->whereNotNull('job_title_id')
             ->whereNull('salary')
             ->whereDoesntHave('media')
@@ -55,6 +56,7 @@ class AnalyzePayslipsFromText extends Command
             // Kun payslips uden løn (medmindre --id er angivet)
             $query->whereNull('salary');
         }
+
 
         if ($limit) {
             $query->limit((int) $limit);

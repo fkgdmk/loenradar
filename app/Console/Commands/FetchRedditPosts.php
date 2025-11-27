@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Payslip;
-use Illuminate\Console\Command;
+use Illuminate\Console\Command; 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 

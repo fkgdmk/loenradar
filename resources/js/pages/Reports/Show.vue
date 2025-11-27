@@ -4,7 +4,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Check, TrendingUp, Download, Share2, ExternalLink } from 'lucide-vue-next';
+import { ArrowLeft, Check, TrendingUp, Download, Share2, ExternalLink, Info } from 'lucide-vue-next';
 import { computed } from 'vue';
 import {
   Dialog,
@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ProsaArea {
     id: number;
@@ -91,6 +92,7 @@ interface Report {
     region: Region;
     area_of_responsibility: AreaOfResponsibility | null;
     conclusion: string;
+    description: string | null;
     lower_percentile: number;
     median: number;
     upper_percentile: number;
@@ -228,6 +230,14 @@ const isSkillMatching = (skillId: number): boolean => {
                     </Button>
                 </div>
             </div>
+
+            <!-- Description Alert -->
+            <Alert v-if="report.description" class="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/30">
+                <Info class="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <AlertDescription class="text-blue-900 dark:text-blue-100">
+                    {{ report.description }}
+                </AlertDescription>
+            </Alert>
 
             <div class="grid gap-6 md:grid-cols-3">
                 <!-- Main Content -->

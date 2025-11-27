@@ -10,6 +10,7 @@ use App\Models\Report;
 use App\Models\ResponsibilityLevel;
 use App\Models\Skill;
 use App\Services\FindMatchingJobPostings;
+use App\Services\FindMatchingPayslips;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -182,18 +183,18 @@ class ReportsController extends Controller
             'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
             'region_id' => 'required|exists:regions,id',
         ], [
-            'document.required' => 'Felt er påkrævet',
+            'document.required' => 'Upload venligst din lønseddel',
             'document.file' => 'Dokumentet skal være en fil',
             'document.mimes' => 'Dokumentet skal være en PDF eller et billede (JPG, PNG, WEBP)',
             'document.max' => 'Dokumentet må maksimalt være 10MB',
-            'job_title_id.required' => 'Felt er påkrævet',
+            'job_title_id.required' => 'Vælg venligst en jobtitel',
             'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
             'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
-            'experience.required' => 'Felt er påkrævet',
+            'experience.required' => 'Indtast venligst dit erfaringsniveau',
             'experience.integer' => 'Erfaring skal være et heltal',
             'experience.min' => 'Erfaring skal være mindst 0 år',
             'experience.max' => 'Erfaring må maksimalt være 50 år',
-            'region_id.required' => 'Felt er påkrævet',
+            'region_id.required' => 'Vælg venligst en region',
             'region_id.exists' => 'Den valgte region er ugyldig',
         ]);
 
@@ -240,7 +241,29 @@ class ReportsController extends Controller
             // Knyt payslip til report
             $report->payslips()->attach($payslip->id);
 
+            // Tjek om der er nok payslips
+            $findMatchingPayslips = new FindMatchingPayslips();
+            $result = $findMatchingPayslips->find($report);
+            $matchingPayslips = $result['payslips'];
+            $description = $result['description'];
+
             DB::commit();
+
+            // Hvis der ikke er nok payslips (under 5), returner fejl med besked
+            if ($matchingPayslips->count() < 5 && $description) {
+                // Slet report og payslip da vi ikke kan fortsætte
+                DB::beginTransaction();
+                try {
+                    $payslip->delete();
+                    DB::commit();
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                }
+                
+                return back()->withErrors([
+                    'payslip_warning' => $description,
+                ]);
+            }
 
             return redirect()->route('reports.create', ['report_id' => $report->id]);
         } catch (\Exception $e) {
@@ -305,7 +328,20 @@ class ReportsController extends Controller
                 ]),
             ]);
 
+            // Tjek om der er nok payslips
+            $findMatchingPayslips = new FindMatchingPayslips();
+            $result = $findMatchingPayslips->find($report);
+            $matchingPayslips = $result['payslips'];
+            $description = $result['description'];
+
             DB::commit();
+
+            // Hvis der ikke er nok payslips (under 5), returner fejl med besked
+            if ($matchingPayslips->count() < 5 && $description) {
+                return back()->withErrors([
+                    'payslip_warning' => $description,
+                ]);
+            }
 
             return redirect()->route('reports.create', ['report_id' => $report->id]);
         } catch (\Exception $e) {
@@ -392,7 +428,6 @@ class ReportsController extends Controller
     {
         $validated = $request->validate([
             'report_id' => 'required|exists:reports,id',
-            // Step 2
             'responsibility_level_id' => 'required|exists:responsibility_levels,id',
             'team_size' => 'nullable|integer|min:0|max:1000',
             'skill_ids' => 'nullable|array|max:5',
@@ -427,15 +462,10 @@ class ReportsController extends Controller
             ]);
 
             // Beregn statistik
-            $experience = $report->experience;
-            $experienceRange = $this->getExperienceRange($experience);
-
-            $matchingPayslips = Payslip::where('job_title_id', $report->job_title_id)
-                ->whereBetween('experience', $experienceRange)
-                ->where('id', '!=', $report->uploaded_payslip_id)
-                ->whereNotNull('verified_at')
-                ->whereNotNull('salary')
-                ->get();
+            $findMatchingPayslips = new FindMatchingPayslips();
+            $result = $findMatchingPayslips->find($report);
+            $matchingPayslips = $result['payslips'];
+            $description = $result['description'];
 
             $salaries = $matchingPayslips->pluck('salary')->sort()->values();
             $count = $salaries->count();
@@ -445,7 +475,7 @@ class ReportsController extends Controller
             $upper = 0;
 
             if ($count > 0) {
-                $lower = $this->calculatePercentile($salaries, 0.25);
+                $lower = $this->calculatePercentile($salaries, 0.25);   
                 $median = $this->calculatePercentile($salaries, 0.50);
                 $upper = $this->calculatePercentile($salaries, 0.75);
 
@@ -460,6 +490,7 @@ class ReportsController extends Controller
                 'median' => $median,
                 'upper_percentile' => $upper,
                 'conclusion' => $conclusion,
+                'description' => $description,
             ]);
 
             // Find og forbind matchende job postings
@@ -476,16 +507,6 @@ class ReportsController extends Controller
         }
     }
 
-    private function getExperienceRange($years)
-    {
-        if ($years <= 3) {
-            return [0, 3];
-        }
-        if ($years <= 9) {
-            return [4, 9];
-        }
-        return [10, 100]; // 10+ år
-    }
 
     private function calculatePercentile($sortedData, $percentile)
     {

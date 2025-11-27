@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, useForm } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Combobox } from '@/components/ui/combobox';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertCircle } from 'lucide-vue-next';
 import InputError from '@/components/InputError.vue';
 import { dashboard } from '@/routes';
 import { ref, computed, watch, reactive } from 'vue';
@@ -17,12 +19,10 @@ import {
     FileText, 
     Briefcase, 
     MapPin, 
-    User, 
     ChevronRight, 
     ChevronLeft,
     Check,
     X,
-    Edit,
     Sparkles
 } from 'lucide-vue-next';
 interface JobTitle {
@@ -105,6 +105,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 const urlParams = new URLSearchParams(window.location.search);
 const urlReportId = urlParams.get('report_id');
 const reportId = ref<number | null>(props.report?.id ?? (urlReportId ? parseInt(urlReportId) : null));
+
+// Payslip warning state
+const payslipWarning = ref<string | null>(null);
+const showPayslipWarningModal = ref(false);
 
 // Bestem step baseret på report data
 const initialStep = computed(() => {
@@ -364,6 +368,13 @@ const nextStep = async () => {
                     currentStep.value = 2;
                 },
                 onError: (errors: Record<string, string>) => {
+                    // Håndter payslip_warning fejl separat
+                    if (errors.payslip_warning) {
+                        payslipWarning.value = errors.payslip_warning;
+                        showPayslipWarningModal.value = true;
+                        // Fjern payslip_warning fra errors så den ikke vises som normal fejl
+                        delete errors.payslip_warning;
+                    }
                     setStep1Errors(errors);
                 },
             });
@@ -388,6 +399,15 @@ const nextStep = async () => {
                 // Watch på props.report vil automatisk opdatere step til 2 når data er klar
             },
             onError: (errors: Record<string, string>) => {
+                // Håndter payslip_warning fejl separat
+                if (errors.payslip_warning) {
+                    payslipWarning.value = errors.payslip_warning;
+                    showPayslipWarningModal.value = true;
+                    // Nulstil reportId da report er blevet slettet
+                    reportId.value = null;
+                    // Fjern payslip_warning fra errors så den ikke vises som normal fejl
+                    delete errors.payslip_warning;
+                }
                 setStep1Errors(errors);
             },
         });
@@ -563,6 +583,12 @@ const filteredSkills = computed(() => {
 });
 
 sanitizeSelectedSkillsForJobTitle();
+
+// Funktion til at lukke modal
+const closePayslipWarningModal = () => {
+    showPayslipWarningModal.value = false;
+    payslipWarning.value = null;
+};
 </script>
 
 <template>
@@ -948,6 +974,31 @@ sanitizeSelectedSkillsForJobTitle();
                 </CardContent>
             </Card>
         </div>
+
+        <!-- Payslip Warning Modal -->
+        <Dialog :open="showPayslipWarningModal" @update:open="showPayslipWarningModal = $event">
+            <DialogContent class="sm:max-w-xl">
+                <div class="whitespace-pre-line text-base text-white mt-4 mx-4 space-y-2">
+                    <div class="font-bold">
+                        {{payslipWarning}}
+                    </div>
+                    <div>
+                        Det er desværre ikke nok til at kunne lave en værdifuld rapport.
+                    </div>
+                    <div>
+                        Vi arbejder på samle mere data, så vi kan give dig et mere præcist billede af dit lønniveau.
+                    </div>
+                    <div>
+                        Vi kontaker dig lige så snart vi er i mål for din profil!
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button @click="closePayslipWarningModal">
+                        Forstået
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>
 

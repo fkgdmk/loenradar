@@ -29,6 +29,7 @@ class Report extends Model
         'median',
         'upper_percentile',
         'conclusion',
+        'description',
         'filters',
     ];
 

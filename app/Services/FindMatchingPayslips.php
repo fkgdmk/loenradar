@@ -43,7 +43,7 @@ class FindMatchingPayslips
         }
 
         if ($matchingPayslips->count() < 5) {
-            $description = "Vi har endnu ikke nok profiler for dit erfaringsniveau ({$experience} år), så vi har samlet alt data fra {$statisticalGroup} på tværs af alle erfaringsniveauer. Vær opmærksom på, at lønspændet derfor kan være bredere end normalt.";
+            $description = "Vi har endnu ikke nok profiler for dit erfaringsniveau ({$experience} år), så vi har bygget rapporten baseret på data fra {$statisticalGroup} på tværs af alle erfaringsniveauer. Vær opmærksom på, at lønspændet derfor kan være bredere end normalt.";
 
             $matchingPayslips = $baseQuery->clone()
                 ->whereHas('region', function ($query) use ($statisticalGroup) {

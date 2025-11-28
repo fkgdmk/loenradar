@@ -45,7 +45,7 @@ class PayslipDetailExtractor
                 // Since the command targets payslips where these are null, it's safe to update.
                 
                 $updateData = [];
-                if (isset($details['company_pension_dkk'])) $updateData['company_pension_dkk'] = $details['company_pension_dkk'];
+                if (isset($details['company_pension_dkk'])) $updateData['company_pension_dkk'] = abs($details['company_pension_dkk']);
                 if (isset($details['company_pension_procent'])) $updateData['company_pension_procent'] = $details['company_pension_procent'];
                 if (isset($details['salary_supplement'])) $updateData['salary_supplement'] = $details['salary_supplement'];
                 if (isset($details['hours_monthly'])) $updateData['hours_monthly'] = $details['hours_monthly'];

@@ -157,12 +157,6 @@ class DashboardController extends Controller
             ->whereNotNull('payslips.region_id')
             ->whereNotNull('payslips.salary')
             ->whereNotNull('regions.statistical_group')
-            ->whereExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('media')
-                    ->whereColumn('media.model_id', 'payslips.id')
-                    ->where('media.model_type', Payslip::class);
-            })
             ->select('job_titles.name', 'regions.statistical_group as region_name', DB::raw('COUNT(*) as count'))
             ->groupBy('job_titles.id', 'job_titles.name', 'regions.statistical_group')
             ->havingRaw('COUNT(*) >= 5')
@@ -230,12 +224,6 @@ class DashboardController extends Controller
             ->whereNotNull('payslips.job_title_id')
             ->whereNotNull('payslips.salary')
             ->whereNotNull('payslips.experience')
-            ->whereExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('media')
-                    ->whereColumn('media.model_id', 'payslips.id')
-                    ->where('media.model_type', Payslip::class);
-            })
             ->select(
                 'job_titles.name',
                 DB::raw('CASE 

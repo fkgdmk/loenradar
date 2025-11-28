@@ -43,7 +43,8 @@ class MatchJobPostingSkills extends Command
         $this->newLine();
 
         // Byg query
-        $query = JobPosting::whereNotNull('description');
+        $query = JobPosting::whereNotNull('description')
+            ->whereDoesntHave('skills');
 
         if ($specificId) {
             $query->where('id', $specificId);

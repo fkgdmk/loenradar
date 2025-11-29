@@ -239,64 +239,97 @@ const isSkillMatching = (skillId: number): boolean => {
                 </AlertDescription>
             </Alert>
 
-            <div class="grid gap-4 sm:gap-6 lg:grid-cols-3">
-                <!-- Main Content -->
-                <div class="lg:col-span-2 space-y-4 sm:space-y-6">
-                    <!-- Conclusion Card -->
-                    <Card class="bg-primary/5 border-primary/20">
-                        <CardHeader>
-                            <CardTitle class="flex items-center gap-2 text-primary">
-                                <TrendingUp class="h-5 w-5" />
-                                Konklusion
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p class="text-lg font-medium leading-relaxed">
-                                Baseret på 
-                                <Dialog>
-                                    <DialogTrigger as-child>
-                                        <span class="font-bold underline cursor-pointer hover:text-primary transition-colors">
-                                            {{ report.payslips.length }} datapunkter
-                                        </span>
-                                    </DialogTrigger>
-                                    <DialogContent class="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-                                        <DialogHeader>
-                                            <DialogTitle>Datagrundlag</DialogTitle>
-                                            <DialogDescription>
-                                                Herunder ses de anonymiserede lønsedler der danner grundlag for rapporten.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <div class="mt-4">
-                                            <div class="rounded-md border">
-                                                <table class="w-full text-sm">
-                                                    <thead class="border-b bg-muted/50">
-                                                        <tr>
-                                                            <th class="p-4 text-left font-medium">Løn</th>
-                                                            <th class="p-4 text-left font-medium">Region</th>
-                                                            <th class="p-4 text-left font-medium">Erfaring</th>
-                                                            <th class="p-4 text-left font-medium">Uploadet</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr v-for="payslip in report.payslips" :key="payslip.id" class="border-b last:border-0 hover:bg-muted/50">
-                                                            <td class="p-4 font-medium">{{ formatCurrency(payslip.total_salary_dkk) }}</td>
-                                                            <td class="p-4">{{ payslip.region?.name }}</td>
-                                                            <td class="p-4">{{ payslip.experience }} år</td>
-                                                            <td class="p-4 text-muted-foreground">{{ formatDate(payslip.uploaded_at) }}</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
+            <!-- Top Section: Konklusion + Profil Detaljer side by side -->
+            <div class="grid gap-4 sm:gap-6 md:grid-cols-3">
+                <!-- Conclusion Card -->
+                <Card class="bg-primary/5 border-primary/20 flex flex-col md:col-span-2">
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2 text-primary">
+                            <TrendingUp class="h-5 w-5" />
+                            Konklusion
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent class="flex-1 flex items-center">
+                        <p class="text-lg font-medium leading-relaxed">
+                            Baseret på 
+                            <Dialog>
+                                <DialogTrigger as-child>
+                                    <span class="font-bold underline cursor-pointer hover:text-primary transition-colors">
+                                        {{ report.payslips.length }} datapunkter
+                                    </span>
+                                </DialogTrigger>
+                                <DialogContent class="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+                                    <DialogHeader>
+                                        <DialogTitle>Datagrundlag</DialogTitle>
+                                        <DialogDescription>
+                                            Herunder ses de anonymiserede lønsedler der danner grundlag for rapporten.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div class="mt-4">
+                                        <div class="rounded-md border">
+                                            <table class="w-full text-sm">
+                                                <thead class="border-b bg-muted/50">
+                                                    <tr>
+                                                        <th class="p-4 text-left font-medium">Løn</th>
+                                                        <th class="p-4 text-left font-medium">Region</th>
+                                                        <th class="p-4 text-left font-medium">Erfaring</th>
+                                                        <th class="p-4 text-left font-medium">Uploadet</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr v-for="payslip in report.payslips" :key="payslip.id" class="border-b last:border-0 hover:bg-muted/50">
+                                                        <td class="p-4 font-medium">{{ formatCurrency(payslip.total_salary_dkk) }}</td>
+                                                        <td class="p-4">{{ payslip.region?.name }}</td>
+                                                        <td class="p-4">{{ payslip.experience }} år</td>
+                                                        <td class="p-4 text-muted-foreground">{{ formatDate(payslip.uploaded_at) }}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
                                         </div>
-                                    </DialogContent>
-                                </Dialog>
-                                for din profil, er et realistisk og velbegrundet lønudspil i intervallet 
-                                <span class="font-bold">{{ formatCurrency(report.lower_percentile) }}</span> 
-                                til 
-                                <span class="font-bold">{{ formatCurrency(report.upper_percentile) }}</span>.
-                            </p>
-                        </CardContent>
-                    </Card>
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                            for din profil, er et realistisk og velbegrundet lønudspil i intervallet 
+                            <span class="font-bold">{{ formatCurrency(report.lower_percentile) }}</span> 
+                            til 
+                            <span class="font-bold">{{ formatCurrency(report.upper_percentile) }}</span>.
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <!-- Profile Details Card -->
+                <Card class="flex flex-col">
+                    <CardHeader>
+                        <CardTitle>Profil Detaljer</CardTitle>
+                    </CardHeader>
+                    <CardContent class="flex-1">
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-muted-foreground">Jobtitel</span>
+                                <span class="font-medium text-right">{{ report.job_title.name_en }}</span>
+                            </div>
+                            
+                            <div v-if="report.area_of_responsibility" class="flex justify-between items-center">
+                                <span class="text-sm text-muted-foreground">Område</span>
+                                <span class="font-medium text-right">{{ report.area_of_responsibility.name }}</span>
+                            </div>
+
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-muted-foreground">Erfaring</span>
+                                <span class="font-medium">{{ report.experience }} år</span>
+                            </div>
+
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-muted-foreground">Region</span>
+                                <span class="font-medium">{{ report.region.name }}</span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <!-- Full Width Cards Section -->
+            <div class="space-y-4 sm:space-y-6">
 
                     <!-- Visualization Card -->
                     <Card>
@@ -369,175 +402,122 @@ const isSkillMatching = (skillId: number): boolean => {
                             </div>
                         </CardContent>
                     </Card>
-                </div>
 
-                <!-- Sidebar Details -->
-                <div class="space-y-4 sm:space-y-6">
-                    <Card>
+                    <!-- Prosa Stats Card -->
+                    <Card v-if="relevantProsaStats.length > 0">
                         <CardHeader>
-                            <CardTitle>Profil Detaljer</CardTitle>
-                        </CardHeader>
-                        <CardContent class="space-y-4">
-                            <div>
-                                <div class="text-sm text-muted-foreground">Jobtitel</div>
-                                <div class="font-medium">{{ report.job_title.name_en }}</div>
-                            </div>
-                            
-                            <div v-if="report.area_of_responsibility">
-                                <div class="text-sm text-muted-foreground">Område</div>
-                                <div class="font-medium">{{ report.area_of_responsibility.name }}</div>
-                            </div>
-
-                            <div>
-                                <div class="text-sm text-muted-foreground">Erfaring</div>
-                                <div class="font-medium">{{ report.experience }} år</div>
-                            </div>
-
-                            <div>
-                                <div class="text-sm text-muted-foreground">Region</div>
-                                <div class="font-medium">{{ report.region.name }}</div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Statistik</CardTitle>
-                        </CardHeader>
-                        <CardContent class="space-y-4">
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-muted-foreground">Nedre (25%)</span>
-                                <span class="font-medium">{{ formatCurrency(report.lower_percentile) }}</span>
-                            </div>
-                            <Separator />
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-muted-foreground">Median (50%)</span>
-                                <span class="font-bold text-primary">{{ formatCurrency(report.median) }}</span>
-                            </div>
-                            <Separator />
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-muted-foreground">Øvre (75%)</span>
-                                <span class="font-medium">{{ formatCurrency(report.upper_percentile) }}</span>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-
-            <!-- Prosa Stats Card -->
-            <Card v-if="relevantProsaStats.length > 0">
-                <CardHeader>
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <div>
-                            <CardTitle class="text-base sm:text-lg">Fagforenings Statistik (PROSA)</CardTitle>
-                            <CardDescription class="text-xs sm:text-sm">
-                                Lønstatistik for {{ report.job_title.prosa_categories[0].category_name }}
-                            </CardDescription>
-                        </div>
-                        <a href="https://www.prosa.dk/raad-og-svar/loenstatistik" target="_blank" rel="noopener noreferrer">
-                            <Button variant="ghost" size="sm">
-                                Kilde <ExternalLink class="ml-2 h-4 w-4" />
-                            </Button>
-                        </a>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div class="rounded-md border overflow-x-auto">
-                        <table class="w-full text-xs sm:text-sm min-w-[500px]">
-                            <thead class="border-b bg-muted/50">
-                                <tr>
-                                    <th class="p-2 sm:p-3 text-left font-medium whitespace-nowrap">Erfaring</th>
-                                    <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Nedre</th>
-                                    <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Median</th>
-                                    <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Øvre</th>
-                                    <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Gns.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr 
-                                    v-for="stat in relevantProsaStats" 
-                                    :key="stat.id" 
-                                    class="border-b last:border-0"
-                                    :class="isStatRelevant(stat) ? 'bg-primary/10 font-medium' : 'hover:bg-muted/50 text-muted-foreground'"
-                                >
-                                    <td class="p-2 sm:p-3 whitespace-nowrap">
-                                        {{ stat.experience_from }}-{{ stat.experience_to }} år
-                                        <span v-if="isStatRelevant(stat)" class="ml-1 sm:ml-2 text-[10px] sm:text-xs bg-primary text-primary-foreground px-1 sm:px-1.5 py-0.5 rounded-full">Dig</span>
-                                    </td>
-                                    <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.lower_quartile_salary) }}</td>
-                                    <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.median_salary) }}</td>
-                                    <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.upper_quartile_salary) }}</td>
-                                    <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.average_salary) }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="mt-3 sm:mt-4 text-[10px] sm:text-xs text-muted-foreground">
-                        Data er baseret på PROSA's lønstatistik. Markeret række viser intervallet der matcher din erfaring.
-                    </p>
-                </CardContent>
-            </Card>
-
-            <!-- Job Postings Card -->
-            <Card v-if="report.job_postings && report.job_postings.length > 0">
-                <CardHeader>
-                    <CardTitle class="text-base sm:text-lg">Matchende Jobopslag</CardTitle>
-                    <CardDescription class="text-xs sm:text-sm">
-                        Jobopslag der matcher din profil baseret på job titel, region, erfaring og skills.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div class="space-y-3">
-                        <div 
-                            v-for="jobPosting in report.job_postings" 
-                            :key="jobPosting.id"
-                            class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                            <div class="flex-1 min-w-0">
-                                <div class="flex flex-wrap items-start sm:items-center gap-2 mb-2">
-                                    <h3 class="font-semibold text-base sm:text-lg break-words">{{ jobPosting.title }}</h3>
-                                    <span 
-                                        class="px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full flex-shrink-0"
-                                        :class="getMatchScoreClass(jobPosting.pivot.match_score)"
-                                    >
-                                        Match: {{ jobPosting.pivot.match_score ?? 0 }}/10
-                                    </span>
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                    <CardTitle class="text-base sm:text-lg">Fagforenings Statistik (PROSA)</CardTitle>
+                                    <CardDescription class="text-xs sm:text-sm">
+                                        Lønstatistik for {{ report.job_title.prosa_categories[0].category_name }}
+                                    </CardDescription>
                                 </div>
-                                <div class="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
-                                    <div v-if="jobPosting.company" class="font-medium text-foreground">
-                                        {{ jobPosting.company }}
-                                    </div>
-                                    <div v-if="jobPosting.region" class="flex flex-wrap items-center gap-2 sm:gap-4">
-                                        <span>{{ jobPosting.region.name }}</span>
-                                        <span v-if="jobPosting.salary_from || jobPosting.salary_to">
-                                            {{ formatSalaryRange(jobPosting.salary_from, jobPosting.salary_to) }}
-                                        </span>
-                                    </div>
-                                    <div v-if="jobPosting.skills && jobPosting.skills.length > 0" class="flex flex-wrap gap-1 mt-2">
-                                        <span
-                                            v-for="skill in jobPosting.skills"
-                                            :key="skill.id"
-                                            class="px-1 py-0.5 text-[9px] rounded border"
-                                            :class="isSkillMatching(skill.id) 
-                                                ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
-                                                : 'bg-muted text-muted-foreground border-border'"
+                                <a href="https://www.prosa.dk/raad-og-svar/loenstatistik" target="_blank" rel="noopener noreferrer">
+                                    <Button variant="ghost" size="sm">
+                                        Kilde <ExternalLink class="ml-2 h-4 w-4" />
+                                    </Button>
+                                </a>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="rounded-md border overflow-x-auto">
+                                <table class="w-full text-xs sm:text-sm min-w-[500px]">
+                                    <thead class="border-b bg-muted/50">
+                                        <tr>
+                                            <th class="p-2 sm:p-3 text-left font-medium whitespace-nowrap">Erfaring</th>
+                                            <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Nedre</th>
+                                            <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Median</th>
+                                            <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Øvre</th>
+                                            <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Gns.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr 
+                                            v-for="stat in relevantProsaStats" 
+                                            :key="stat.id" 
+                                            class="border-b last:border-0"
+                                            :class="isStatRelevant(stat) ? 'bg-primary/10 font-medium' : 'hover:bg-muted/50 text-muted-foreground'"
                                         >
-                                            {{ skill.name }}
-                                        </span>
+                                            <td class="p-2 sm:p-3 whitespace-nowrap">
+                                                {{ stat.experience_from }}-{{ stat.experience_to }} år
+                                                <span v-if="isStatRelevant(stat)" class="ml-1 sm:ml-2 text-[10px] sm:text-xs bg-primary text-primary-foreground px-1 sm:px-1.5 py-0.5 rounded-full">Dig</span>
+                                            </td>
+                                            <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.lower_quartile_salary) }}</td>
+                                            <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.median_salary) }}</td>
+                                            <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.upper_quartile_salary) }}</td>
+                                            <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.average_salary) }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="mt-3 sm:mt-4 text-[10px] sm:text-xs text-muted-foreground">
+                                Data er baseret på PROSA's lønstatistik. Markeret række viser intervallet der matcher din erfaring.
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Job Postings Card -->
+                    <Card v-if="report.job_postings && report.job_postings.length > 0">
+                        <CardHeader>
+                            <CardTitle class="text-base sm:text-lg">Matchende Jobopslag</CardTitle>
+                            <CardDescription class="text-xs sm:text-sm">
+                                Jobopslag der matcher din profil baseret på job titel, region, erfaring og skills.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-3">
+                                <div 
+                                    v-for="jobPosting in report.job_postings" 
+                                    :key="jobPosting.id"
+                                    class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                                >
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex flex-wrap items-start sm:items-center gap-2 mb-2">
+                                            <h3 class="font-semibold text-base sm:text-lg break-words">{{ jobPosting.title }}</h3>
+                                            <span 
+                                                class="px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full flex-shrink-0"
+                                                :class="getMatchScoreClass(jobPosting.pivot.match_score)"
+                                            >
+                                                Match: {{ jobPosting.pivot.match_score ?? 0 }}/10
+                                            </span>
+                                        </div>
+                                        <div class="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
+                                            <div v-if="jobPosting.company" class="font-medium text-foreground">
+                                                {{ jobPosting.company }}
+                                            </div>
+                                            <div v-if="jobPosting.region" class="flex flex-wrap items-center gap-2 sm:gap-4">
+                                                <span>{{ jobPosting.region.name }}</span>
+                                                <span v-if="jobPosting.salary_from || jobPosting.salary_to">
+                                                    {{ formatSalaryRange(jobPosting.salary_from, jobPosting.salary_to) }}
+                                                </span>
+                                            </div>
+                                            <div v-if="jobPosting.skills && jobPosting.skills.length > 0" class="flex flex-wrap gap-1 mt-2">
+                                                <span
+                                                    v-for="skill in jobPosting.skills"
+                                                    :key="skill.id"
+                                                    class="px-1 py-0.5 text-[9px] rounded border"
+                                                    :class="isSkillMatching(skill.id) 
+                                                        ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
+                                                        : 'bg-muted text-muted-foreground border-border'"
+                                                >
+                                                    {{ skill.name }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="sm:ml-4 flex-shrink-0">
+                                        <Button variant="outline" size="sm" as-child class="w-full sm:w-auto">
+                                            <a :href="jobPosting.url" target="_blank" rel="noopener noreferrer">
+                                                Se opslag <ExternalLink class="ml-2 h-4 w-4" />
+                                            </a>
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
-                            <div class="sm:ml-4 flex-shrink-0">
-                                <Button variant="outline" size="sm" as-child class="w-full sm:w-auto">
-                                    <a :href="jobPosting.url" target="_blank" rel="noopener noreferrer">
-                                        Se opslag <ExternalLink class="ml-2 h-4 w-4" />
-                                    </a>
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+            </div>
         </div>
     </AppLayout>
 </template>

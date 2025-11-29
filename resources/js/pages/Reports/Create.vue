@@ -23,8 +23,10 @@ import {
     ChevronLeft,
     Check,
     X,
-    Sparkles
+    Sparkles,
+    Pencil
 } from 'lucide-vue-next';
+import PayslipAnonymizer from '@/components/PayslipAnonymizer.vue';
 interface JobTitle {
     id: number;
     name: string;
@@ -128,6 +130,10 @@ const uploadedFile = ref<File | null>(null);
 const uploadedFilePreview = ref<string | null>(null);
 const persistedDocument = ref<UploadedDocument | null>(props.report?.document ?? null);
 const selectedSkills = ref<number[]>(props.report?.skill_ids ?? []);
+
+// Anonymizer state
+const showAnonymizer = ref(false);
+const fileToAnonymize = ref<File | null>(null);
 
 // Search states for dropdowns
 const jobTitleSearch = ref('');
@@ -288,6 +294,16 @@ const handleFileChange = (event: Event) => {
         return;
     }
     
+    // For billeder og PDF'er, åbn anonymizer først
+    if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+        fileToAnonymize.value = file;
+        showAnonymizer.value = true;
+    } else {
+        setUploadedFile(file);
+    }
+};
+
+const setUploadedFile = (file: File) => {
     uploadedFile.value = file;
     form.document = file;
     
@@ -300,6 +316,27 @@ const handleFileChange = (event: Event) => {
         reader.readAsDataURL(file);
     } else {
         uploadedFilePreview.value = null;
+    }
+};
+
+const handleAnonymizedImage = (anonymizedFile: File) => {
+    showAnonymizer.value = false;
+    fileToAnonymize.value = null;
+    setUploadedFile(anonymizedFile);
+    
+    // Ryd file input
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
+    }
+};
+
+const cancelAnonymizer = () => {
+    showAnonymizer.value = false;
+    fileToAnonymize.value = null;
+    
+    // Ryd file input
+    if (fileInputRef.value) {
+        fileInputRef.value.value = '';
     }
 };
 
@@ -676,7 +713,7 @@ const closePayslipWarningModal = () => {
                     </CardTitle>
                     <CardDescription>
                         <span v-if="currentStep === 1">
-                            Upload din anonymiserede lønseddel og indtast detaljer om din stilling
+                            Upload din lønseddel og indtast detaljer om din stilling
                         </span>
                         <span v-else-if="currentStep === 2">
                             Beskriv dit ansvarsniveau og vælg dine færdigheder
@@ -693,28 +730,56 @@ const closePayslipWarningModal = () => {
                         <div>
                             <Label class="mb-2 flex items-center gap-2">
                                 <Upload class="h-4 w-4" />
-                                Upload lønseddel (påkrævet)
+                                Upload lønseddel
                             </Label>
                             <div v-if="uploadedFile" class="mt-2">
-                                <div class="flex items-center gap-4 rounded-lg border p-4">
-                                    <div v-if="uploadedFilePreview" class="h-20 w-20 overflow-hidden rounded">
-                                        <img :src="uploadedFilePreview" alt="Preview" class="h-full w-full object-cover" />
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg border p-4">
+                                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                                        <div v-if="uploadedFilePreview" class="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded flex-shrink-0">
+                                            <img :src="uploadedFilePreview" alt="Preview" class="h-full w-full object-cover" />
+                                        </div>
+                                        <FileText v-else class="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground flex-shrink-0" />
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-medium truncate">{{ uploadedFile.name }}</p>
+                                            <p class="text-sm text-muted-foreground">
+                                                {{ formatFileSize(uploadedFile.size) }}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <FileText v-else class="h-12 w-12 text-muted-foreground" />
-                                    <div class="flex-1">
-                                        <p class="font-medium">{{ uploadedFile.name }}</p>
-                                        <p class="text-sm text-muted-foreground">
-                                            {{ formatFileSize(uploadedFile.size) }}
-                                        </p>
+                                    <div class="flex items-center gap-2 sm:gap-1 self-end sm:self-center">
+                                        <Button
+                                            v-if="uploadedFile.type.startsWith('image/')"
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            class="sm:variant-ghost"
+                                            @click="fileToAnonymize = uploadedFile; showAnonymizer = true"
+                                            title="Rediger anonymisering"
+                                        >
+                                            <Pencil class="h-4 w-4 sm:mr-0 mr-1" />
+                                            <span class="sm:hidden">Rediger</span>
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            class="sm:variant-ghost"
+                                            @click="removeFile"
+                                            title="Fjern fil"
+                                        >
+                                            <X class="h-4 w-4 sm:mr-0 mr-1" />
+                                            <span class="sm:hidden">Fjern</span>
+                                        </Button>
                                     </div>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        @click="removeFile"
-                                    >
-                                        <X class="h-4 w-4" />
-                                    </Button>
+                                </div>
+                                
+                                <!-- Anonymizer for redigering af allerede uploadet fil -->
+                                <div v-if="showAnonymizer && fileToAnonymize" class="mt-4">
+                                    <PayslipAnonymizer
+                                        :file="fileToAnonymize"
+                                        @save="handleAnonymizedImage"
+                                        @cancel="cancelAnonymizer"
+                                    />
                                 </div>
                             </div>
                             <div v-else-if="persistedDocument" class="mt-2">
@@ -747,14 +812,24 @@ const closePayslipWarningModal = () => {
                                     variant="outline"
                                     class="w-full"
                                     @click="fileInputRef?.click()"
+                                    :disabled="showAnonymizer"
                                 >
                                     <Upload class="mr-2 h-4 w-4" />
                                     Vælg fil (PDF eller billede)
                                 </Button>
                                 <p class="mt-2 text-xs text-muted-foreground">
-                                    Maksimal størrelse: 10MB. Filen skal være anonymiseret.
+                                    Maksimal størrelse: 10MB. Du kan anonymisere direkte i browseren.
                                 </p>
                                 <InputError :message="step1Errors.document" />
+                                
+                                <!-- Anonymizer -->
+                                <div v-if="showAnonymizer && fileToAnonymize" class="mt-4">
+                                    <PayslipAnonymizer
+                                        :file="fileToAnonymize"
+                                        @save="handleAnonymizedImage"
+                                        @cancel="cancelAnonymizer"
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -764,7 +839,7 @@ const closePayslipWarningModal = () => {
                         <div>
                             <Label class="mb-2 flex items-center gap-2">
                                 <Briefcase class="h-4 w-4" />
-                                Jobtitel (påkrævet)
+                                Jobtitel
                             </Label>
                             <Combobox
                                 v-model="form.job_title_id"
@@ -778,7 +853,7 @@ const closePayslipWarningModal = () => {
 
                         <!-- Area of Responsibility (conditional) -->
                         <div v-if="showAreaOfResponsibility">
-                            <Label class="mb-2">Område (påkrævet)</Label>
+                            <Label class="mb-2">Område</Label>
                             <Combobox
                                 v-model="form.area_of_responsibility_id"
                                 :options="areaOfResponsibilityOptions"
@@ -791,7 +866,7 @@ const closePayslipWarningModal = () => {
 
                         <!-- Experience -->
                         <div>
-                            <Label class="mb-2">Erfaring i år (påkrævet)</Label>
+                            <Label class="mb-2">Erfaring i år</Label>
                             <Input
                                 v-model.number="experienceInput"
                                 type="number"
@@ -806,7 +881,7 @@ const closePayslipWarningModal = () => {
                         <div>
                             <Label class="mb-2 flex items-center gap-2">
                                 <MapPin class="h-4 w-4" />
-                                Region (påkrævet)
+                                Region
                             </Label>
                             <Combobox
                                 v-model="form.region_id"
@@ -824,7 +899,7 @@ const closePayslipWarningModal = () => {
                         <!-- Responsibility Level -->
                         <div>
                             <Label class="mb-2">
-                                Hvilket ansvarsniveau beskriver bedst din rolle? (påkrævet)
+                                Hvilket ansvarsniveau beskriver bedst din rolle?
                             </Label>
                             <Combobox
                                 v-model="form.responsibility_level_id"

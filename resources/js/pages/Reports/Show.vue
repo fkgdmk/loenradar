@@ -213,16 +213,16 @@ const isSkillMatching = (skillId: number): boolean => {
     <Head title="Lønrapport" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-            <div class="flex items-center justify-between">
+        <div class="flex h-full flex-1 flex-col gap-4 sm:gap-6 overflow-x-auto rounded-xl p-2 sm:p-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div class="space-y-1">
-                    <h2 class="text-2xl font-semibold tracking-tight">Din Lønrapport</h2>
+                    <h2 class="text-xl sm:text-2xl font-semibold tracking-tight">Din Lønrapport</h2>
                     <p class="text-sm text-muted-foreground">
                         Genereret d. {{ formatDate(report.created_at) }}
                     </p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <Button variant="outline" as-child>
+                <div class="flex items-center">
+                    <Button variant="outline" as-child class="w-full sm:w-auto">
                         <Link href="/reports">
                             <ArrowLeft class="mr-2 h-4 w-4" />
                             Tilbage til oversigt
@@ -239,9 +239,9 @@ const isSkillMatching = (skillId: number): boolean => {
                 </AlertDescription>
             </Alert>
 
-            <div class="grid gap-6 md:grid-cols-3">
+            <div class="grid gap-4 sm:gap-6 lg:grid-cols-3">
                 <!-- Main Content -->
-                <div class="md:col-span-2 space-y-6">
+                <div class="lg:col-span-2 space-y-4 sm:space-y-6">
                     <!-- Conclusion Card -->
                     <Card class="bg-primary/5 border-primary/20">
                         <CardHeader>
@@ -307,67 +307,72 @@ const isSkillMatching = (skillId: number): boolean => {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div class="pt-6 pb-2">
-                                <div class="relative h-24 w-full">
-                                    <!-- Base Line -->
-                                    <div class="absolute top-10 left-0 right-0 h-2 bg-muted rounded-full"></div>
-
-                                    <!-- Range Bar -->
-                                    <div 
-                                        class="absolute top-10 h-2 bg-primary/30 rounded-full"
-                                        :style="{ 
-                                            left: `${getPosition(report.lower_percentile)}%`, 
-                                            right: `${100 - getPosition(report.upper_percentile)}%` 
-                                        }"
-                                    ></div>
-
-                                    <!-- Lower Percentile Marker -->
-                                    <div 
-                                        class="absolute top-0 flex flex-col items-center transform -translate-x-1/2"
-                                        :style="{ left: `${getPosition(report.lower_percentile)}%` }"
-                                    >
-                                        <div class="text-xs font-medium text-muted-foreground mb-1">25%</div>
-                                        <div class="h-12 w-0.5 bg-primary/50"></div>
-                                        <div class="mt-1 text-sm font-bold whitespace-nowrap">
-                                            {{ formatCurrency(report.lower_percentile) }}
+                            <div class="space-y-4 sm:space-y-6">
+                                <!-- Salary Range Bar - Clean Minimal Design -->
+                                <div class="relative py-3">
+                                    <!-- Main track -->
+                                    <div class="relative h-2.5 bg-muted/60 rounded-full">
+                                        <!-- Active range -->
+                                        <div 
+                                            class="absolute inset-y-0 bg-gradient-to-r from-primary/60 via-primary to-primary/60 rounded-full"
+                                            :style="{ 
+                                                left: `${getPosition(report.lower_percentile)}%`, 
+                                                right: `${100 - getPosition(report.upper_percentile)}%`
+                                            }"
+                                        ></div>
+                                        
+                                        <!-- Lower percentile marker -->
+                                        <div 
+                                            class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                                            :style="{ left: `${getPosition(report.lower_percentile)}%` }"
+                                        >
+                                            <div class="w-4 h-4 rounded-full bg-background border-[3px] border-primary/70 shadow-sm"></div>
                                         </div>
-                                    </div>
-
-                                    <!-- Median Marker -->
-                                    <div 
-                                        class="absolute top-0 flex flex-col items-center transform -translate-x-1/2 z-10"
-                                        :style="{ left: `${getPosition(report.median)}%` }"
-                                    >
-                                        <div class="text-xs font-medium text-muted-foreground mb-1">Median</div>
-                                        <div class="h-12 w-0.5 bg-primary"></div>
-                                        <div class="mt-1 text-lg font-bold text-primary whitespace-nowrap">
-                                            {{ formatCurrency(report.median) }}
+                                        
+                                        <!-- Median marker (prominent) -->
+                                        <div 
+                                            class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
+                                            :style="{ left: `${getPosition(report.median)}%` }"
+                                        >
+                                            <div class="w-5 h-5 rounded-full bg-primary shadow-lg shadow-primary/40"></div>
                                         </div>
-                                    </div>
-
-                                    <!-- Upper Percentile Marker -->
-                                    <div 
-                                        class="absolute top-0 flex flex-col items-center transform -translate-x-1/2"
-                                        :style="{ left: `${getPosition(report.upper_percentile)}%` }"
-                                    >
-                                        <div class="text-xs font-medium text-muted-foreground mb-1">75%</div>
-                                        <div class="h-12 w-0.5 bg-primary/50"></div>
-                                        <div class="mt-1 text-sm font-bold whitespace-nowrap">
-                                            {{ formatCurrency(report.upper_percentile) }}
+                                        
+                                        <!-- Upper percentile marker -->
+                                        <div 
+                                            class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                                            :style="{ left: `${getPosition(report.upper_percentile)}%` }"
+                                        >
+                                            <div class="w-4 h-4 rounded-full bg-background border-[3px] border-primary/70 shadow-sm"></div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="mt-8 text-center text-sm text-muted-foreground">
-                                    Dette interval repræsenterer de mest almindelige lønninger for din profil.
-                                    50% af lønningerne ligger mellem 25% og 75% fraktilen.
+
+                                <!-- Values displayed as cards below -->
+                                <div class="grid grid-cols-3 gap-1.5 sm:gap-3">
+                                    <div class="text-center p-2 sm:p-3 rounded-lg bg-muted/50">
+                                        <div class="text-[9px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Nedre (25%)</div>
+                                        <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrency(report.lower_percentile) }}</div>
+                                    </div>
+                                    <div class="text-center p-2 sm:p-3 rounded-lg bg-primary/10 border border-primary/20">
+                                        <div class="text-[9px] sm:text-xs text-primary font-medium mb-0.5 sm:mb-1">Median (50%)</div>
+                                        <div class="text-sm sm:text-lg font-bold text-primary truncate">{{ formatCurrency(report.median) }}</div>
+                                    </div>
+                                    <div class="text-center p-2 sm:p-3 rounded-lg bg-muted/50">
+                                        <div class="text-[9px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Øvre (75%)</div>
+                                        <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrency(report.upper_percentile) }}</div>
+                                    </div>
                                 </div>
+
+                                <p class="text-center text-[10px] sm:text-xs text-muted-foreground">
+                                    50% af lønningerne ligger mellem nedre og øvre kvartil.
+                                </p>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
                 <!-- Sidebar Details -->
-                <div class="space-y-6">
+                <div class="space-y-4 sm:space-y-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Profil Detaljer</CardTitle>
@@ -422,10 +427,10 @@ const isSkillMatching = (skillId: number): boolean => {
             <!-- Prosa Stats Card -->
             <Card v-if="relevantProsaStats.length > 0">
                 <CardHeader>
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div>
-                            <CardTitle>Fagforenings Statistik (PROSA)</CardTitle>
-                            <CardDescription>
+                            <CardTitle class="text-base sm:text-lg">Fagforenings Statistik (PROSA)</CardTitle>
+                            <CardDescription class="text-xs sm:text-sm">
                                 Lønstatistik for {{ report.job_title.prosa_categories[0].category_name }}
                             </CardDescription>
                         </div>
@@ -437,15 +442,15 @@ const isSkillMatching = (skillId: number): boolean => {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div class="rounded-md border">
-                        <table class="w-full text-sm">
+                    <div class="rounded-md border overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm min-w-[500px]">
                             <thead class="border-b bg-muted/50">
                                 <tr>
-                                    <th class="p-3 text-left font-medium">Erfaring</th>
-                                    <th class="p-3 text-right font-medium">Nedre Kvartil</th>
-                                    <th class="p-3 text-right font-medium">Median</th>
-                                    <th class="p-3 text-right font-medium">Øvre Kvartil</th>
-                                    <th class="p-3 text-right font-medium">Gns.</th>
+                                    <th class="p-2 sm:p-3 text-left font-medium whitespace-nowrap">Erfaring</th>
+                                    <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Nedre</th>
+                                    <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Median</th>
+                                    <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Øvre</th>
+                                    <th class="p-2 sm:p-3 text-right font-medium whitespace-nowrap">Gns.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -455,19 +460,19 @@ const isSkillMatching = (skillId: number): boolean => {
                                     class="border-b last:border-0"
                                     :class="isStatRelevant(stat) ? 'bg-primary/10 font-medium' : 'hover:bg-muted/50 text-muted-foreground'"
                                 >
-                                    <td class="p-3">
-                                        {{ stat.experience_from }} - {{ stat.experience_to }} år
-                                        <span v-if="isStatRelevant(stat)" class="ml-2 text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">Dig</span>
+                                    <td class="p-2 sm:p-3 whitespace-nowrap">
+                                        {{ stat.experience_from }}-{{ stat.experience_to }} år
+                                        <span v-if="isStatRelevant(stat)" class="ml-1 sm:ml-2 text-[10px] sm:text-xs bg-primary text-primary-foreground px-1 sm:px-1.5 py-0.5 rounded-full">Dig</span>
                                     </td>
-                                    <td class="p-3 text-right">{{ formatCurrency(stat.lower_quartile_salary) }}</td>
-                                    <td class="p-3 text-right">{{ formatCurrency(stat.median_salary) }}</td>
-                                    <td class="p-3 text-right">{{ formatCurrency(stat.upper_quartile_salary) }}</td>
-                                    <td class="p-3 text-right">{{ formatCurrency(stat.average_salary) }}</td>
+                                    <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.lower_quartile_salary) }}</td>
+                                    <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.median_salary) }}</td>
+                                    <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.upper_quartile_salary) }}</td>
+                                    <td class="p-2 sm:p-3 text-right whitespace-nowrap">{{ formatCurrency(stat.average_salary) }}</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <p class="mt-4 text-xs text-muted-foreground">
+                    <p class="mt-3 sm:mt-4 text-[10px] sm:text-xs text-muted-foreground">
                         Data er baseret på PROSA's lønstatistik. Markeret række viser intervallet der matcher din erfaring.
                     </p>
                 </CardContent>
@@ -476,8 +481,8 @@ const isSkillMatching = (skillId: number): boolean => {
             <!-- Job Postings Card -->
             <Card v-if="report.job_postings && report.job_postings.length > 0">
                 <CardHeader>
-                    <CardTitle>Matchende Jobopslag</CardTitle>
-                    <CardDescription>
+                    <CardTitle class="text-base sm:text-lg">Matchende Jobopslag</CardTitle>
+                    <CardDescription class="text-xs sm:text-sm">
                         Jobopslag der matcher din profil baseret på job titel, region, erfaring og skills.
                     </CardDescription>
                 </CardHeader>
@@ -486,23 +491,23 @@ const isSkillMatching = (skillId: number): boolean => {
                         <div 
                             v-for="jobPosting in report.job_postings" 
                             :key="jobPosting.id"
-                            class="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                            class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                         >
-                            <div class="flex-1">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <h3 class="font-semibold text-lg">{{ jobPosting.title }}</h3>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-start sm:items-center gap-2 mb-2">
+                                    <h3 class="font-semibold text-base sm:text-lg break-words">{{ jobPosting.title }}</h3>
                                     <span 
-                                        class="px-2 py-1 text-xs font-medium rounded-full"
+                                        class="px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full flex-shrink-0"
                                         :class="getMatchScoreClass(jobPosting.pivot.match_score)"
                                     >
                                         Match: {{ jobPosting.pivot.match_score ?? 0 }}/10
                                     </span>
                                 </div>
-                                <div class="space-y-2 text-sm text-muted-foreground">
+                                <div class="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
                                     <div v-if="jobPosting.company" class="font-medium text-foreground">
                                         {{ jobPosting.company }}
                                     </div>
-                                    <div v-if="jobPosting.region" class="flex items-center gap-4">
+                                    <div v-if="jobPosting.region" class="flex flex-wrap items-center gap-2 sm:gap-4">
                                         <span>{{ jobPosting.region.name }}</span>
                                         <span v-if="jobPosting.salary_from || jobPosting.salary_to">
                                             {{ formatSalaryRange(jobPosting.salary_from, jobPosting.salary_to) }}
@@ -522,8 +527,8 @@ const isSkillMatching = (skillId: number): boolean => {
                                     </div>
                                 </div>
                             </div>
-                            <div class="ml-4">
-                                <Button variant="outline" size="sm" as-child>
+                            <div class="sm:ml-4 flex-shrink-0">
+                                <Button variant="outline" size="sm" as-child class="w-full sm:w-auto">
                                     <a :href="jobPosting.url" target="_blank" rel="noopener noreferrer">
                                         Se opslag <ExternalLink class="ml-2 h-4 w-4" />
                                     </a>

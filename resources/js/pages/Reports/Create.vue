@@ -208,6 +208,12 @@ const showAreaOfResponsibility = computed(() => {
     return selectedJobTitle ? props.leadership_roles.includes(selectedJobTitle.name_en) : false;
 });
 
+const showTeamSize = computed(() => {
+    if (!form.responsibility_level_id) return false;
+    const selectedLevel = props.responsibility_levels.find(rl => rl.id === form.responsibility_level_id);
+    return selectedLevel ? ['Faglig leder', 'Personaleleder'].includes(selectedLevel.name) : false;
+});
+
 const selectedJobTitle = computed(() => {
     if (!form.job_title_id) return null;
     return props.job_titles.find(jt => jt.id === form.job_title_id) ?? null;
@@ -590,6 +596,13 @@ watch(() => form.gender, (newValue) => {
     }
 });
 
+// Nulstil team_size når ansvarsniveau ændres til ikke-leder
+watch(() => form.responsibility_level_id, () => {
+    if (!showTeamSize.value) {
+        form.team_size = null;
+    }
+});
+
 // Computed options for comboboxes
 const jobTitleOptions = computed(() => 
     props.job_titles.map(jt => ({ 
@@ -632,73 +645,73 @@ const closePayslipWarningModal = () => {
     <Head title="Opret Rapport" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+        <div class="flex h-full flex-1 flex-col gap-4 sm:gap-6 overflow-x-auto rounded-xl p-2 sm:p-4">
             <!-- Progress Indicator -->
-            <div class="flex items-center justify-center gap-8">
+            <div class="flex items-center justify-center gap-2 sm:gap-8">
                 <button
                     type="button"
                     @click="navigateToStep(1)"
                     :disabled="!isStep1Completed"
                     :class="[
-                        'flex items-center gap-3 transition-opacity',
+                        'flex items-center gap-2 sm:gap-3 transition-opacity',
                         isStep1Completed ? 'cursor-pointer hover:opacity-80' : 'cursor-not-allowed opacity-50'
                     ]"
                 >
                     <div 
                         :class="[
-                            'flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-colors',
+                            'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-colors',
                             currentStep >= 1 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                         ]"
                     >
-                        <Check v-if="currentStep > 1" class="h-5 w-5" />
+                        <Check v-if="currentStep > 1" class="h-4 w-4 sm:h-5 sm:w-5" />
                         <span v-else>1</span>
                     </div>
-                    <span class="text-sm font-medium" :class="currentStep >= 1 ? 'text-foreground' : 'text-muted-foreground'">
+                    <span class="hidden sm:inline text-sm font-medium" :class="currentStep >= 1 ? 'text-foreground' : 'text-muted-foreground'">
                         Upload Lønseddel
                     </span>
                 </button>
-                <ChevronRight class="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <ChevronRight class="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
                 <button
                     type="button"
                     @click="navigateToStep(2)"
                     :disabled="!isStep2Completed"
                     :class="[
-                        'flex items-center gap-3 transition-opacity',
+                        'flex items-center gap-2 sm:gap-3 transition-opacity',
                         isStep2Completed ? 'cursor-pointer hover:opacity-80' : 'cursor-not-allowed opacity-50'
                     ]"
                 >
                     <div 
                         :class="[
-                            'flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-colors',
+                            'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-colors',
                             currentStep >= 2 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                         ]"
                     >
-                        <Check v-if="currentStep > 2" class="h-5 w-5" />
+                        <Check v-if="currentStep > 2" class="h-4 w-4 sm:h-5 sm:w-5" />
                         <span v-else>2</span>
                     </div>
-                    <span class="text-sm font-medium" :class="currentStep >= 2 ? 'text-foreground' : 'text-muted-foreground'">
+                    <span class="hidden sm:inline text-sm font-medium" :class="currentStep >= 2 ? 'text-foreground' : 'text-muted-foreground'">
                         Ansvar & Kompetencer
                     </span>
                 </button>
-                <ChevronRight class="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <ChevronRight class="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
                 <button
                     type="button"
                     @click="navigateToStep(3)"
                     :disabled="!isStep3Completed"
                     :class="[
-                        'flex items-center gap-3 transition-opacity',
+                        'flex items-center gap-2 sm:gap-3 transition-opacity',
                         isStep3Completed ? 'cursor-pointer hover:opacity-80' : 'cursor-not-allowed opacity-50'
                     ]"
                 >
                     <div 
                         :class="[
-                            'flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-colors',
+                            'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full text-xs sm:text-sm font-semibold transition-colors',
                             currentStep >= 3 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                         ]"
                     >
                         3
                     </div>
-                    <span class="text-sm font-medium" :class="currentStep >= 3 ? 'text-foreground' : 'text-muted-foreground'">
+                    <span class="hidden sm:inline text-sm font-medium" :class="currentStep >= 3 ? 'text-foreground' : 'text-muted-foreground'">
                         Gennemgå & Generer
                     </span>
                 </button>
@@ -910,8 +923,8 @@ const closePayslipWarningModal = () => {
                             />
                         </div>
 
-                        <!-- Team Size -->
-                        <div>
+                        <!-- Team Size (kun for ledere) -->
+                        <div v-if="showTeamSize">
                             <Label class="mb-2">
                                 Hvor mange personer er du faglig eller personalemæssig leder for?
                             </Label>
@@ -971,64 +984,66 @@ const closePayslipWarningModal = () => {
 
                     <!-- Step 3: Opsummering -->
                     <div v-if="currentStep === 3" class="space-y-6">
-                        <div class="rounded-lg border bg-muted/50 p-4">
+                        <div class="rounded-lg border bg-muted/50 p-3 sm:p-4">
                             <p class="mb-4 text-sm font-medium">
                                 Generer lønforhandlings rapport baseret på følgende:
                             </p>
-                            <div class="space-y-3 text-sm">
-                                <div class="flex items-start justify-between">
+                            <div class="space-y-2 sm:space-y-3 text-sm">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
                                     <span class="text-muted-foreground">Jobtitel:</span>
-                                    <span class="font-medium">{{ getJobTitleName(form.job_title_id) }}</span>
+                                    <span class="font-medium sm:text-right">{{ getJobTitleName(form.job_title_id) }}</span>
                                 </div>
-                                <div v-if="form.area_of_responsibility_id" class="flex items-start justify-between">
+                                <div v-if="form.area_of_responsibility_id" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
                                     <span class="text-muted-foreground">Område:</span>
-                                    <span class="font-medium">{{ getAreaOfResponsibilityName(form.area_of_responsibility_id) }}</span>
+                                    <span class="font-medium sm:text-right">{{ getAreaOfResponsibilityName(form.area_of_responsibility_id) }}</span>
                                 </div>
-                                <div class="flex items-start justify-between">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
                                     <span class="text-muted-foreground">Erfaring:</span>
-                                    <span class="font-medium">{{ form.experience }} år</span>
+                                    <span class="font-medium sm:text-right">{{ form.experience }} år</span>
                                 </div>
-                                <div v-if="form.gender" class="flex items-start justify-between">
+                                <div v-if="form.gender" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
                                     <span class="text-muted-foreground">Køn:</span>
-                                    <span class="font-medium">{{ form.gender }}</span>
+                                    <span class="font-medium sm:text-right">{{ form.gender }}</span>
                                 </div>
-                                <div class="flex items-start justify-between">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
                                     <span class="text-muted-foreground">Region:</span>
-                                    <span class="font-medium">{{ getRegionName(form.region_id) }}</span>
+                                    <span class="font-medium sm:text-right">{{ getRegionName(form.region_id) }}</span>
                                 </div>
-                                <div class="flex items-start justify-between">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
                                     <span class="text-muted-foreground">Ansvarsniveau:</span>
-                                    <span class="font-medium">{{ getResponsibilityLevelName(form.responsibility_level_id) }}</span>
+                                    <span class="font-medium sm:text-right">{{ getResponsibilityLevelName(form.responsibility_level_id) }}</span>
                                 </div>
-                                <div v-if="form.team_size" class="flex items-start justify-between">
+                                <div v-if="form.team_size" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
                                     <span class="text-muted-foreground">Team størrelse:</span>
-                                    <span class="font-medium">{{ form.team_size }} personer</span>
+                                    <span class="font-medium sm:text-right">{{ form.team_size }} personer</span>
                                 </div>
-                                <div class="flex items-start justify-between">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
                                     <span class="text-muted-foreground">Færdigheder:</span>
-                                    <span class="font-medium text-right max-w-xs">{{ getSkillNames(form.skill_ids) }}</span>
+                                    <span class="font-medium sm:text-right">{{ getSkillNames(form.skill_ids) || 'Ingen valgt' }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Navigation Buttons -->
-                    <div class="flex items-center justify-between pt-4 border-t">
+                    <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-2 pt-4 border-t">
                         <Button
                             v-if="currentStep > 1"
                             type="button"
                             variant="outline"
+                            class="w-full sm:w-auto"
                             @click="previousStep"
                         >
                             <ChevronLeft class="mr-2 h-4 w-4" />
                             Tilbage
                         </Button>
-                        <div v-else></div>
+                        <div v-else class="hidden sm:block"></div>
                         
-                        <div class="flex gap-2">
+                        <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                             <Button
                                 v-if="currentStep < 3"
                                 type="button"
+                                class="w-full sm:w-auto"
                                 :disabled="currentStep === 2 && !canProceedToStep3"
                                 @click="nextStep"
                             >
@@ -1038,6 +1053,7 @@ const closePayslipWarningModal = () => {
                             <Button
                                 v-else
                                 type="button"
+                                class="w-full sm:w-auto"
                                 :disabled="form.processing"
                                 @click="submitForm"
                             >

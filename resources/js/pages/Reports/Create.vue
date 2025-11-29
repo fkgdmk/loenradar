@@ -99,6 +99,7 @@ onMounted(() => {
             <ReportFormWizard 
                 :report-form="reportForm"
                 :show-auth-prompt="false"
+                :is-authenticated="isAuthenticated"
                 submit-button-text="Generer Rapport"
                 @submit="handleSubmit"
             />

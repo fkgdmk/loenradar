@@ -1,5 +1,5 @@
 import { ref, computed, watch, reactive } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
 import type {
     ReportFormProps,
     ReportData,
@@ -338,8 +338,10 @@ export function useReportForm(options: UseReportFormOptions) {
             
             const normalizedGender = form.gender && form.gender.trim() !== '' ? form.gender : null;
             
+            // Determine method: use PATCH if report already exists, otherwise use configured method
+            const hasExistingReport = reportId.value && reportId.value !== 'guest';
+            const step1Method = hasExistingReport ? 'patch' : (endpoints.step1Method ?? 'post');
             const step1Url = resolveEndpoint(endpoints.step1, reportId.value);
-            const step1Method = endpoints.step1Method ?? 'post';
             
             // Build form data - only include document for new reports (POST)
             const step1Data: Record<string, any> = {
@@ -367,7 +369,11 @@ export function useReportForm(options: UseReportFormOptions) {
                     if (errors.payslip_warning) {
                         payslipWarning.value = errors.payslip_warning;
                         showPayslipWarningModal.value = true;
-                        reportId.value = null;
+                        // Use report_id from error response if available (report was saved)
+                        if (errors.report_id) {
+                            reportId.value = parseInt(errors.report_id, 10);
+                            delete errors.report_id;
+                        }
                         delete errors.payslip_warning;
                     }
                     setStep1Errors(errors);
@@ -479,8 +485,22 @@ export function useReportForm(options: UseReportFormOptions) {
         props.responsibility_levels.map(rl => ({ value: rl.id, label: rl.name }))
     );
 
-    // Close payslip warning modal
-    const closePayslipWarningModal = () => {
+    // Close payslip warning modal and optionally save contact email
+    const closePayslipWarningModal = (contactEmail?: string) => {
+        // If contact email is provided and report exists, save it
+        if (contactEmail && contactEmail.trim() && reportId.value) {
+            router.post('/reports/contact-email', {
+                report_id: reportId.value,
+                contact_email: contactEmail.trim(),
+            }, {
+                preserveScroll: true,
+                preserveState: true,
+                onError: (errors) => {
+                    console.error('Fejl ved gemning af kontakt email:', errors);
+                },
+            });
+        }
+        
         showPayslipWarningModal.value = false;
         payslipWarning.value = null;
     };

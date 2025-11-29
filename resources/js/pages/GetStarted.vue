@@ -18,7 +18,13 @@ const showAuthModal = ref(false);
 const reportForm = useReportForm({
     props,
     endpoints: {
-        step1: '/reports/guest/payslip',
+        // Use PATCH for existing reports, POST for new
+        step1: (reportId) => {
+            if (reportId && reportId !== 'guest') {
+                return `/reports/guest/${reportId}/step1`;
+            }
+            return '/reports/guest/payslip';
+        },
         step2: '/reports/guest/step2',
         submit: '/reports/guest/finalize',
     },
@@ -60,6 +66,7 @@ const submitButtonText = computed(() =>
         <ReportFormWizard 
             :report-form="reportForm"
             :show-auth-prompt="!isAuthenticated"
+            :is-authenticated="isAuthenticated"
             :submit-button-text="submitButtonText"
             @submit="handleSubmit"
         />

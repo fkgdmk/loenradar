@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { Link } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
 import PayslipAnonymizer from '@/components/PayslipAnonymizer.vue';
+import { login } from '@/routes';
 import { 
     Upload, 
     FileText, 
@@ -20,22 +22,29 @@ import {
     Check,
     X,
     Sparkles,
-    Pencil
+    Pencil,
+    LogIn,
+    Mail
 } from 'lucide-vue-next';
 import type { useReportForm } from '@/composables/useReportForm';
 
 interface Props {
     reportForm: ReturnType<typeof useReportForm>;
     showAuthPrompt?: boolean;
+    isAuthenticated?: boolean;
     submitButtonText?: string;
     hideDocumentUploadAfterStep1?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     showAuthPrompt: false,
+    isAuthenticated: false,
     submitButtonText: 'Generer Rapport',
     hideDocumentUploadAfterStep1: false,
 });
+
+// Local state for contact email
+const contactEmail = ref('');
 
 const emit = defineEmits<{
     submit: [];
@@ -160,12 +169,12 @@ const handleSubmit = () => {
                 <div v-if="rf.currentStep.value === 1" class="space-y-6">
                     <!-- File Upload -->
                     <div>
-                        <Label class="mb-2 flex items-center gap-2">
+                        <Label v-if="!rf.showAnonymizer.value" class="mb-2 flex items-center gap-2">
                             <Upload class="h-4 w-4" />
                             Upload lønseddel
                         </Label>
                         <div v-if="rf.uploadedFile.value" class="mt-2">
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg border p-4">
+                            <div v-if="!rf.showAnonymizer.value" class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg border p-4">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
                                     <div v-if="rf.uploadedFilePreview.value" class="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded flex-shrink-0">
                                         <img :src="rf.uploadedFilePreview.value" alt="Preview" class="h-full w-full object-cover" />
@@ -236,20 +245,21 @@ const handleSubmit = () => {
                                 class="hidden"
                                 @change="rf.handleFileChange"
                             />
-                            <Button
-                                type="button"
-                                variant="outline"
-                                class="w-full"
-                                @click="handleFileInputClick"
-                                :disabled="rf.showAnonymizer.value"
-                            >
-                                <Upload class="mr-2 h-4 w-4" />
-                                Vælg fil (PDF eller billede)
-                            </Button>
-                            <p class="mt-2 text-xs text-muted-foreground">
-                                Du kan anonymisere direkte i browseren.
-                            </p>
-                            <InputError :message="rf.step1Errors.document" />
+                            <div v-if="!rf.showAnonymizer.value">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    class="w-full"
+                                    @click="handleFileInputClick"
+                                >
+                                    <Upload class="mr-2 h-4 w-4" />
+                                    Vælg fil (PDF eller billede)
+                                </Button>
+                                <p class="mt-2 text-xs text-muted-foreground">
+                                    Du kan anonymisere direkte i browseren.
+                                </p>
+                                <InputError :message="rf.step1Errors.document" />
+                            </div>
                             
                             <div v-if="rf.showAnonymizer.value && rf.fileToAnonymize.value" class="mt-4">
                                 <PayslipAnonymizer
@@ -504,14 +514,47 @@ const handleSubmit = () => {
                     Det er desværre ikke nok til at kunne lave en værdifuld rapport.
                 </div>
                 <div>
-                    Vi arbejder på samle mere data, så vi kan give dig et mere præcist billede af dit lønniveau.
+                    Vi arbejder på at samle mere data, så vi kan give dig et mere præcist billede af dit lønniveau.
                 </div>
-                <div>
-                    Vi kontaker dig lige så snart vi er i mål for din profil!
-                </div>
+                
+                <!-- For ikke-autentificerede brugere: vis email input og login link -->
+                <template v-if="!isAuthenticated">
+                    <div class="pt-2 space-y-4">
+                        <div class="space-y-2">
+                            <Label for="contact-email" class="flex items-center gap-2">
+                                <Mail class="h-4 w-4" />
+                                Indtast din email, så kontakter vi dig når vi er i mål
+                            </Label>
+                            <Input
+                                id="contact-email"
+                                v-model="contactEmail"
+                                type="email"
+                                placeholder="din@email.dk"
+                            />
+                        </div>
+                        
+                        <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>eller</span>
+                            <Link 
+                                :href="login()" 
+                                class="inline-flex items-center gap-1 text-primary hover:underline font-medium"
+                            >
+                                <LogIn class="h-4 w-4" />
+                                Log ind / Opret ny bruger
+                            </Link>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- For autentificerede brugere: vis standard besked -->
+                <template v-else>
+                    <div>
+                        Vi kontakter dig lige så snart vi er i mål for din profil!
+                    </div>
+                </template>
             </div>
             <DialogFooter>
-                <Button @click="rf.closePayslipWarningModal">
+                <Button @click="rf.closePayslipWarningModal(contactEmail)">
                     Forstået
                 </Button>
             </DialogFooter>

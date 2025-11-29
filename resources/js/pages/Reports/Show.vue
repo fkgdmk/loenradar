@@ -116,7 +116,7 @@ const successMessage = ref('');
 
 onMounted(() => {
     const flash = page.props.flash as { success?: string } | undefined;
-    // if (flash?.success) {
+    if (flash?.success) {
         successMessage.value = 'Din rapport blev genereret';
         showSuccessAlert.value = true;
         
@@ -124,7 +124,7 @@ onMounted(() => {
         setTimeout(() => {
             showSuccessAlert.value = false;
         }, 5000);
-    // }
+    }
 });
 
 const dismissAlert = () => {

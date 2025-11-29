@@ -17,7 +17,9 @@ Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index
 // Guest-accessible report creation flow (no auth required)
 Route::get('/get-started', [App\Http\Controllers\ReportsController::class, 'getStarted'])->name('get-started');
 Route::post('/reports/guest/payslip', [App\Http\Controllers\ReportsController::class, 'storeGuestPayslip'])->name('reports.storeGuestPayslip');
+Route::patch('/reports/guest/{report}/step1', [App\Http\Controllers\ReportsController::class, 'updateGuestStep1'])->name('reports.updateGuestStep1');
 Route::patch('/reports/guest/step2', [App\Http\Controllers\ReportsController::class, 'updateGuestStep2'])->name('reports.updateGuestStep2');
+Route::post('/reports/contact-email', [App\Http\Controllers\ReportsController::class, 'storeContactEmail'])->name('reports.storeContactEmail');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Finalize guest report after login

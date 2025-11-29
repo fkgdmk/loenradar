@@ -315,27 +315,19 @@ class ReportsController extends Controller
             // Knyt payslip til report
             $report->payslips()->attach($payslip->id);
 
-            // Tjek om der er nok payslips
+            DB::commit();
+
+            // Tjek om der er nok payslips EFTER gemning
             $findMatchingPayslips = new FindMatchingPayslips();
             $result = $findMatchingPayslips->find($report);
             $matchingPayslips = $result['payslips'];
             $description = $result['description'];
 
-            DB::commit();
-
-            // Hvis der ikke er nok payslips (under 5), returner fejl med besked
+            // Hvis der ikke er nok payslips (under 5), returner fejl med report_id
             if ($matchingPayslips->count() < 5 && $description) {
-                // Slet report og payslip da vi ikke kan fortsætte
-                DB::beginTransaction();
-                try {
-                    $payslip->delete();
-                    DB::commit();
-                } catch (\Exception $e) {
-                    DB::rollBack();
-                }
-                
                 return back()->withErrors([
                     'payslip_warning' => $description,
+                    'report_id' => $report->id,
                 ]);
             }
 
@@ -344,6 +336,46 @@ class ReportsController extends Controller
             DB::rollBack();
             return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af lønsedlen.']);
         }
+    }
+
+    /**
+     * Store contact email for a report (when not enough payslips are available).
+     */
+    public function storeContactEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'report_id' => 'required|exists:reports,id',
+            'contact_email' => 'required|email|max:255',
+        ], [
+            'contact_email.required' => 'Indtast venligst en email',
+            'contact_email.email' => 'Indtast venligst en gyldig email',
+        ]);
+
+        $guestToken = $request->session()->get('guest_report_token');
+        
+        // Find the report - allow both guest token and authenticated user access
+        $query = Report::where('id', $validated['report_id']);
+        
+        if ($request->user()) {
+            $query->where(function ($q) use ($request, $guestToken) {
+                $q->where('user_id', $request->user()->id)
+                  ->orWhere('guest_token', $guestToken);
+            });
+        } else {
+            $query->where('guest_token', $guestToken);
+        }
+        
+        $report = $query->first();
+
+        if (!$report) {
+            return back()->withErrors(['error' => 'Rapport ikke fundet.']);
+        }
+
+        $report->update([
+            'contact_email' => $validated['contact_email'],
+        ]);
+
+        return back();
     }
 
     /**
@@ -380,27 +412,6 @@ class ReportsController extends Controller
             $gender = ucfirst(strtolower(trim($gender)));
         } else {
             $gender = null;
-        }
-
-        // Check for matching payslips using a temporary report object
-        $tempReport = new Report([
-            'job_title_id' => $validated['job_title_id'],
-            'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
-            'experience' => $validated['experience'],
-            'region_id' => $validated['region_id'],
-            'filters' => ['gender' => $gender],
-        ]);
-
-        $findMatchingPayslips = new FindMatchingPayslips();
-        $result = $findMatchingPayslips->find($tempReport);
-        $matchingPayslips = $result['payslips'];
-        $description = $result['description'];
-
-        // If not enough payslips, return error
-        if ($matchingPayslips->count() < 5 && $description) {
-            return back()->withErrors([
-                'payslip_warning' => $description,
-            ]);
         }
 
         DB::beginTransaction();
@@ -447,10 +458,120 @@ class ReportsController extends Controller
 
             DB::commit();
 
+            // Check for matching payslips AFTER saving the report
+            $findMatchingPayslips = new FindMatchingPayslips();
+            $result = $findMatchingPayslips->find($report);
+            $matchingPayslips = $result['payslips'];
+            $description = $result['description'];
+
+            // If not enough payslips, return error with report_id
+            if ($matchingPayslips->count() < 5 && $description) {
+                return back()->withErrors([
+                    'payslip_warning' => $description,
+                    'report_id' => $report->id,
+                ]);
+            }
+
             return redirect()->route('get-started', ['report_id' => $report->id]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af lønsedlen.']);
+        }
+    }
+
+    /**
+     * Update step 1 data for guests (when report already exists).
+     */
+    public function updateGuestStep1(Request $request, Report $report)
+    {
+        $guestToken = $request->session()->get('guest_report_token');
+        
+        // Verify access to the report
+        if ($report->status !== 'draft') {
+            return back()->withErrors(['error' => 'Rapport kan ikke opdateres.']);
+        }
+        
+        if ($request->user()) {
+            if ($report->user_id !== $request->user()->id && $report->guest_token !== $guestToken) {
+                return back()->withErrors(['error' => 'Adgang nægtet.']);
+            }
+        } else {
+            if ($report->guest_token !== $guestToken) {
+                return back()->withErrors(['error' => 'Adgang nægtet.']);
+            }
+        }
+
+        $validated = $request->validate([
+            'job_title_id' => 'required|exists:job_titles,id',
+            'area_of_responsibility_id' => 'nullable|exists:area_of_responsibilities,id',
+            'experience' => 'required|integer|min:0|max:50',
+            'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
+            'region_id' => 'required|exists:regions,id',
+        ], [
+            'job_title_id.required' => 'Vælg venligst en jobtitel',
+            'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
+            'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
+            'experience.required' => 'Indtast venligst dit erfaringsniveau',
+            'experience.integer' => 'Erfaring skal være et heltal',
+            'experience.min' => 'Erfaring skal være mindst 0 år',
+            'experience.max' => 'Erfaring må maksimalt være 50 år',
+            'region_id.required' => 'Vælg venligst en region',
+            'region_id.exists' => 'Den valgte region er ugyldig',
+        ]);
+
+        // Normaliser gender
+        $gender = $validated['gender'] ?? null;
+        if ($gender && trim($gender) !== '') {
+            $gender = ucfirst(strtolower(trim($gender)));
+        } else {
+            $gender = null;
+        }
+
+        DB::beginTransaction();
+        try {
+            // Opdater payslip
+            $payslip = $report->uploadedPayslip;
+            if ($payslip) {
+                $payslip->update([
+                    'job_title_id' => $validated['job_title_id'],
+                    'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
+                    'experience' => $validated['experience'],
+                    'gender' => $gender,
+                    'region_id' => $validated['region_id'],
+                ]);
+            }
+
+            // Opdater report
+            $report->update([
+                'job_title_id' => $validated['job_title_id'],
+                'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
+                'experience' => $validated['experience'],
+                'region_id' => $validated['region_id'],
+                'filters' => array_merge($report->filters ?? [], [
+                    'gender' => $gender,
+                ]),
+            ]);
+
+            DB::commit();
+
+            // Tjek om der er nok payslips
+            $findMatchingPayslips = new FindMatchingPayslips();
+            $result = $findMatchingPayslips->find($report);
+            $matchingPayslips = $result['payslips'];
+            $description = $result['description'];
+
+            // Hvis der ikke er nok payslips (under 5), returner fejl med report_id
+            if ($matchingPayslips->count() < 5 && $description) {
+                return back()->withErrors([
+                    'payslip_warning' => $description,
+                    'report_id' => $report->id,
+                ]);
+            }
+
+            return redirect()->route('get-started', ['report_id' => $report->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Der opstod en fejl ved opdatering af data.']);
         }
     }
 
@@ -668,18 +789,19 @@ class ReportsController extends Controller
                 ]),
             ]);
 
+            DB::commit();
+
             // Tjek om der er nok payslips
             $findMatchingPayslips = new FindMatchingPayslips();
             $result = $findMatchingPayslips->find($report);
             $matchingPayslips = $result['payslips'];
             $description = $result['description'];
 
-            DB::commit();
-
-            // Hvis der ikke er nok payslips (under 5), returner fejl med besked
+            // Hvis der ikke er nok payslips (under 5), returner fejl med report_id
             if ($matchingPayslips->count() < 5 && $description) {
                 return back()->withErrors([
                     'payslip_warning' => $description,
+                    'report_id' => $report->id,
                 ]);
             }
 

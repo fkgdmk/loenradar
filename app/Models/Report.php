@@ -24,6 +24,7 @@ class Report extends Model
         'region_id',
         'user_id',
         'guest_token',
+        'contact_email',
         'uploaded_payslip_id',
         'status',
         'lower_percentile',

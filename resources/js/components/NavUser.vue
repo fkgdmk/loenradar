@@ -11,19 +11,32 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
-import { usePage } from '@inertiajs/vue3';
-import { ChevronsUpDown } from 'lucide-vue-next';
+import { Link, usePage } from '@inertiajs/vue3';
+import { ChevronsUpDown, LogIn } from 'lucide-vue-next';
 import UserMenuContent from './UserMenuContent.vue';
+import { login } from '@/routes';
+import { computed } from 'vue';
 
 const page = usePage();
-const user = page.props.auth.user;
+const user = computed(() => page.props.auth?.user);
 const { isMobile, state } = useSidebar();
 </script>
 
 <template>
     <SidebarMenu>
         <SidebarMenuItem>
-            <DropdownMenu>
+            <!-- Show login button for guests -->
+            <template v-if="!user">
+                <SidebarMenuButton size="lg" as-child>
+                    <Link :href="login()" class="flex items-center gap-2">
+                        <LogIn class="h-5 w-5" />
+                        <span>Log ind</span>
+                    </Link>
+                </SidebarMenuButton>
+            </template>
+            
+            <!-- Show user menu for authenticated users -->
+            <DropdownMenu v-else>
                 <DropdownMenuTrigger as-child>
                     <SidebarMenuButton
                         size="lg"

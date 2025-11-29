@@ -30,6 +30,7 @@ interface Props {
   emptyText?: string
   searchPlaceholder?: string
   class?: string
+  disabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -85,6 +86,7 @@ watch(open, (isOpen) => {
         variant="outline"
         role="combobox"
         :aria-expanded="open"
+        :disabled="props.disabled"
         :class="cn('w-full justify-between', props.class)"
       >
         {{ selectedOption?.label || props.placeholder }}

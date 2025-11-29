@@ -13,6 +13,8 @@ use App\Services\FindMatchingJobPostings;
 use App\Services\FindMatchingPayslips;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,9 +52,93 @@ class ReportsController extends Controller
     }
 
     /**
-     * Show the form for creating a new report.
+     * Show the form for creating a new report (authenticated users only).
      */
     public function create(Request $request): Response
+    {
+        $formData = $this->getReportFormData();
+
+        $reportData = null;
+        $reportId = $request->query('report_id');
+
+        if ($reportId) {
+            $guestToken = $request->session()->get('guest_report_token');
+            
+            // Find report - either by user_id (for existing reports) or guest_token (for guest reports being finalized)
+            $query = Report::where('id', $reportId)
+                ->where('status', 'draft')
+                ->with(['uploadedPayslip', 'jobTitle', 'region', 'areaOfResponsibility']);
+            
+            if ($guestToken) {
+                // Check for guest report first
+                $query->where(function ($q) use ($request, $guestToken) {
+                    $q->where('user_id', $request->user()->id)
+                      ->orWhere('guest_token', $guestToken);
+                });
+            } else {
+                // Only check user_id if no guest token
+                $query->where('user_id', $request->user()->id);
+            }
+            
+            $report = $query->first();
+
+            if ($report) {
+                $reportData = $this->formatReportData($report);
+            }
+        }
+
+        return Inertia::render('Reports/Create', [
+            ...$formData,
+            'report' => $reportData,
+        ]);
+    }
+
+    /**
+     * Show the get started page for guests (and authenticated users).
+     */
+    public function getStarted(Request $request): Response
+    {
+        $formData = $this->getReportFormData();
+
+        $reportData = null;
+        $reportId = $request->query('report_id');
+
+        if ($reportId) {
+            // Try to find report by ID and guest_token from session
+            $guestToken = $request->session()->get('guest_report_token');
+            
+            $query = Report::where('id', $reportId)
+                ->where('status', 'draft')
+                ->with(['uploadedPayslip', 'jobTitle', 'region', 'areaOfResponsibility']);
+            
+            // If user is authenticated, check user_id
+            if ($request->user()) {
+                $query->where(function ($q) use ($request, $guestToken) {
+                    $q->where('user_id', $request->user()->id)
+                      ->orWhere('guest_token', $guestToken);
+                });
+            } else {
+                // For guests, verify with guest_token
+                $query->where('guest_token', $guestToken);
+            }
+            
+            $report = $query->first();
+
+            if ($report) {
+                $reportData = $this->formatReportData($report);
+            }
+        }
+
+        return Inertia::render('GetStarted', [
+            ...$formData,
+            'report' => $reportData,
+        ]);
+    }
+
+    /**
+     * Get common form data for report creation.
+     */
+    private function getReportFormData(): array
     {
         $jobTitles = JobTitle::with('skills:id')
             ->orderBy('name_en')
@@ -98,76 +184,64 @@ class ReportsController extends Controller
             'Teamleder / Team Lead',
         ];
 
-        // Hent eksisterende report hvis report_id er i query
-        $report = null;
-        $reportId = $request->query('report_id');
-        if ($reportId) {
-            $report = Report::where('id', $reportId)
-                ->where('user_id', $request->user()->id)
-                ->where('status', 'draft')
-                ->with(['uploadedPayslip', 'jobTitle', 'region', 'areaOfResponsibility'])
-                ->first();
-        }
-
-        $reportData = null;
-        if ($report) {
-            $filters = $report->filters ?? [];
-            $skillIds = $filters['skill_ids'] ?? [];
-            $responsibilityLevelId = $report->uploadedPayslip?->responsibility_level_id;
-            
-            // Bestem step baseret på data
-            // Step 1: job_title, region, experience udfyldt
-            // Step 2: responsibility_level_id udfyldt
-            // Step 3: ready for submission (responsibility_level_id er sat)
-            $step = 1;
-            if ($report->job_title_id && $report->region_id && $report->experience !== null) {
-                $step = 2;
-                if ($responsibilityLevelId) {
-                    $step = 3;
-                }
-            }
-
-            // Hent dokument fra payslip
-            $document = null;
-            if ($report->uploadedPayslip) {
-                $media = $report->uploadedPayslip->getFirstMedia('documents');
-                if ($media) {
-                    $document = [
-                        'name' => $media->file_name,
-                        'size' => $media->size,
-                        'mime_type' => $media->mime_type,
-                        'preview_url' => $media->mime_type && str_starts_with($media->mime_type, 'image/')
-                            ? $media->getFullUrl()
-                            : null,
-                        'download_url' => $media->getFullUrl(),
-                    ];
-                }
-            }
-
-            $reportData = [
-                'id' => $report->id,
-                'job_title_id' => $report->job_title_id,
-                'area_of_responsibility_id' => $report->area_of_responsibility_id,
-                'experience' => $report->experience,
-                'gender' => $filters['gender'] ?? null,
-                'region_id' => $report->region_id,
-                'responsibility_level_id' => $responsibilityLevelId,
-                'team_size' => $report->uploadedPayslip?->team_size,
-                'skill_ids' => $skillIds,
-                'step' => $step,
-                'document' => $document,
-            ];
-        }
-
-        return Inertia::render('Reports/Create', [
+        return [
             'job_titles' => $jobTitles,
             'regions' => $regions,
             'areas_of_responsibility' => $areasOfResponsibility,
             'responsibility_levels' => $responsibilityLevels,
             'skills' => $skills,
             'leadership_roles' => $leadershipRoles,
-            'report' => $reportData,
-        ]);
+        ];
+    }
+
+    /**
+     * Format report data for frontend.
+     */
+    private function formatReportData(Report $report): array
+    {
+        $filters = $report->filters ?? [];
+        $skillIds = $filters['skill_ids'] ?? [];
+        $responsibilityLevelId = $report->uploadedPayslip?->responsibility_level_id;
+        
+        // Bestem step baseret på data
+        $step = 1;
+        if ($report->job_title_id && $report->region_id && $report->experience !== null) {
+            $step = 2;
+            if ($responsibilityLevelId) {
+                $step = 3;
+            }
+        }
+
+        // Hent dokument fra payslip
+        $document = null;
+        if ($report->uploadedPayslip) {
+            $media = $report->uploadedPayslip->getFirstMedia('documents');
+            if ($media) {
+                $document = [
+                    'name' => $media->file_name,
+                    'size' => $media->size,
+                    'mime_type' => $media->mime_type,
+                    'preview_url' => $media->mime_type && str_starts_with($media->mime_type, 'image/')
+                        ? $media->getFullUrl()
+                        : null,
+                    'download_url' => $media->getFullUrl(),
+                ];
+            }
+        }
+
+        return [
+            'id' => $report->id,
+            'job_title_id' => $report->job_title_id,
+            'area_of_responsibility_id' => $report->area_of_responsibility_id,
+            'experience' => $report->experience,
+            'gender' => $filters['gender'] ?? null,
+            'region_id' => $report->region_id,
+            'responsibility_level_id' => $responsibilityLevelId,
+            'team_size' => $report->uploadedPayslip?->team_size,
+            'skill_ids' => $skillIds,
+            'step' => $step,
+            'document' => $document,
+        ];
     }
 
     /**
@@ -269,6 +343,272 @@ class ReportsController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af lønsedlen.']);
+        }
+    }
+
+    /**
+     * Store payslip data for guests (save to database as draft).
+     */
+    public function storeGuestPayslip(Request $request)
+    {
+        $validated = $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'job_title_id' => 'required|exists:job_titles,id',
+            'area_of_responsibility_id' => 'nullable|exists:area_of_responsibilities,id',
+            'experience' => 'required|integer|min:0|max:50',
+            'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
+            'region_id' => 'required|exists:regions,id',
+        ], [
+            'document.required' => 'Upload venligst din lønseddel',
+            'document.file' => 'Dokumentet skal være en fil',
+            'document.mimes' => 'Dokumentet skal være en PDF eller et billede (JPG, PNG, WEBP)',
+            'document.max' => 'Dokumentet må maksimalt være 10MB',
+            'job_title_id.required' => 'Vælg venligst en jobtitel',
+            'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
+            'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
+            'experience.required' => 'Indtast venligst dit erfaringsniveau',
+            'experience.integer' => 'Erfaring skal være et heltal',
+            'experience.min' => 'Erfaring skal være mindst 0 år',
+            'experience.max' => 'Erfaring må maksimalt være 50 år',
+            'region_id.required' => 'Vælg venligst en region',
+            'region_id.exists' => 'Den valgte region er ugyldig',
+        ]);
+
+        // Normaliser gender
+        $gender = $validated['gender'] ?? null;
+        if ($gender && trim($gender) !== '') {
+            $gender = ucfirst(strtolower(trim($gender)));
+        } else {
+            $gender = null;
+        }
+
+        // Check for matching payslips using a temporary report object
+        $tempReport = new Report([
+            'job_title_id' => $validated['job_title_id'],
+            'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
+            'experience' => $validated['experience'],
+            'region_id' => $validated['region_id'],
+            'filters' => ['gender' => $gender],
+        ]);
+
+        $findMatchingPayslips = new FindMatchingPayslips();
+        $result = $findMatchingPayslips->find($tempReport);
+        $matchingPayslips = $result['payslips'];
+        $description = $result['description'];
+
+        // If not enough payslips, return error
+        if ($matchingPayslips->count() < 5 && $description) {
+            return back()->withErrors([
+                'payslip_warning' => $description,
+            ]);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Generate unique guest token
+            $guestToken = Str::uuid()->toString();
+
+            // Create payslip without uploader_id (guest)
+            $payslip = Payslip::create([
+                'job_title_id' => $validated['job_title_id'],
+                'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
+                'experience' => $validated['experience'],
+                'gender' => $gender,
+                'region_id' => $validated['region_id'],
+                'uploader_id' => $request->user()?->id, // null for guests
+                'uploaded_at' => now(),
+                'source' => 'guest_upload',
+            ]);
+
+            // Upload document to payslip
+            $payslip->addMediaFromRequest('document')
+                ->toMediaCollection('documents');
+
+            // Create draft report
+            $report = Report::create([
+                'user_id' => $request->user()?->id, // null for guests
+                'guest_token' => $guestToken,
+                'uploaded_payslip_id' => $payslip->id,
+                'job_title_id' => $validated['job_title_id'],
+                'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
+                'experience' => $validated['experience'],
+                'region_id' => $validated['region_id'],
+                'status' => 'draft',
+                'filters' => [
+                    'gender' => $gender,
+                ],
+            ]);
+
+            // Attach payslip to report
+            $report->payslips()->attach($payslip->id);
+
+            // Store guest token in session for verification
+            $request->session()->put('guest_report_token', $guestToken);
+
+            DB::commit();
+
+            return redirect()->route('get-started', ['report_id' => $report->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af lønsedlen.']);
+        }
+    }
+
+    /**
+     * Update step 2 data for guests (save to database).
+     */
+    public function updateGuestStep2(Request $request)
+    {
+        $validated = $request->validate([
+            'report_id' => 'required|exists:reports,id',
+            'responsibility_level_id' => 'required|exists:responsibility_levels,id',
+            'team_size' => 'nullable|integer|min:0|max:1000',
+            'skill_ids' => 'nullable|array|max:5',
+            'skill_ids.*' => 'exists:skills,id',
+        ]);
+
+        $guestToken = $request->session()->get('guest_report_token');
+        
+        // Find the draft report
+        $query = Report::where('id', $validated['report_id'])
+            ->where('status', 'draft');
+        
+        if ($request->user()) {
+            $query->where(function ($q) use ($request, $guestToken) {
+                $q->where('user_id', $request->user()->id)
+                  ->orWhere('guest_token', $guestToken);
+            });
+        } else {
+            $query->where('guest_token', $guestToken);
+        }
+        
+        $report = $query->first();
+
+        if (!$report) {
+            return back()->withErrors(['error' => 'Rapport ikke fundet. Start forfra venligst.']);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Update payslip with step 2 data
+            $payslip = $report->uploadedPayslip;
+            if ($payslip) {
+                $payslip->update([
+                    'responsibility_level_id' => $validated['responsibility_level_id'],
+                    'team_size' => $validated['team_size'] ?? null,
+                ]);
+            }
+
+            // Update report filters with step 2 data
+            $report->update([
+                'filters' => array_merge($report->filters ?? [], [
+                    'responsibility_level_id' => $validated['responsibility_level_id'],
+                    'team_size' => $validated['team_size'] ?? null,
+                    'skill_ids' => $validated['skill_ids'] ?? [],
+                ]),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('get-started', ['report_id' => $report->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Der opstod en fejl ved opdatering af data.']);
+        }
+    }
+
+    /**
+     * Finalize guest report after authentication.
+     */
+    public function finalizeGuestReport(Request $request)
+    {
+        $validated = $request->validate([
+            'report_id' => 'required|exists:reports,id',
+        ]);
+
+        $guestToken = $request->session()->get('guest_report_token');
+        
+        // Find the draft report by guest_token
+        $report = Report::where('id', $validated['report_id'])
+            ->where('guest_token', $guestToken)
+            ->where('status', 'draft')
+            ->first();
+
+        if (!$report) {
+            return redirect()->route('get-started')->withErrors(['error' => 'Rapport ikke fundet.']);
+        }
+
+        // Check if step 2 is completed (responsibility_level_id in filters)
+        $filters = $report->filters ?? [];
+        if (!isset($filters['responsibility_level_id'])) {
+            return redirect()->route('get-started', ['report_id' => $report->id])
+                ->withErrors(['error' => 'Udfyld venligst alle trin før du fortsætter.']);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Assign user to report and payslip
+            $report->update(['user_id' => $request->user()->id]);
+            
+            if ($report->uploadedPayslip) {
+                $report->uploadedPayslip->update([
+                    'uploader_id' => $request->user()->id,
+                    'source' => 'user_upload',
+                ]);
+            }
+
+            // Calculate statistics
+            $findMatchingPayslips = new FindMatchingPayslips();
+            $result = $findMatchingPayslips->find($report);
+            $matchingPayslips = $result['payslips'];
+            $description = $result['description'];
+
+            $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
+            $count = $salaries->count();
+
+            $lower = 0;
+            $median = 0;
+            $upper = 0;
+
+            if ($count > 0) {
+                $lower = $this->calculatePercentile($salaries, 0.25);
+                $median = $this->calculatePercentile($salaries, 0.50);
+                $upper = $this->calculatePercentile($salaries, 0.75);
+
+                // Attach matching payslips
+                $report->payslips()->sync($matchingPayslips->pluck('id'));
+            }
+
+            $conclusion = "Baseret på {$count} datapunkter for din profil, er et realistisk og velbegrundet lønudspil i intervallet " . number_format($lower, 0, ',', '.') . " kr. til " . number_format($upper, 0, ',', '.') . " kr.";
+
+            // Mark report as completed
+            $report->update([
+                'status' => 'completed',
+                'lower_percentile' => $lower,
+                'median' => $median,
+                'upper_percentile' => $upper,
+                'conclusion' => $conclusion,
+                'description' => $description,
+            ]);
+
+            // Find and attach matching job postings
+            $findMatchingJobPostings = new FindMatchingJobPostings();
+            $findMatchingJobPostings->findAndAttach($report);
+
+            // Find and attach matching job postings
+            $findMatchingJobPostings = new FindMatchingJobPostings();
+            $findMatchingJobPostings->findAndAttach($report);
+
+            // Clear guest session token
+            $request->session()->forget('guest_report_token');
+
+            DB::commit();
+
+            return redirect()->route('reports.show', $report->id)
+                ->with('success', 'Rapport oprettet succesfuldt');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af rapporten: ' . $e->getMessage()]);
         }
     }
 

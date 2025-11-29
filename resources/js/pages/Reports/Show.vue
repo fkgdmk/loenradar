@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Check, TrendingUp, Download, Share2, ExternalLink, Info } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { ArrowLeft, Check, TrendingUp, Download, Share2, ExternalLink, Info, CheckCircle2, X } from 'lucide-vue-next';
+import { computed, ref, onMounted } from 'vue';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface ProsaArea {
     id: number;
@@ -108,6 +108,28 @@ interface Report {
 const props = defineProps<{
     report: Report;
 }>();
+
+// Flash message handling
+const page = usePage();
+const showSuccessAlert = ref(false);
+const successMessage = ref('');
+
+onMounted(() => {
+    const flash = page.props.flash as { success?: string } | undefined;
+    // if (flash?.success) {
+        successMessage.value = 'Din rapport blev genereret';
+        showSuccessAlert.value = true;
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            showSuccessAlert.value = false;
+        }, 5000);
+    // }
+});
+
+const dismissAlert = () => {
+    showSuccessAlert.value = false;
+};
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('da-DK', {
@@ -520,4 +542,33 @@ const isSkillMatching = (skillId: number): boolean => {
             </div>
         </div>
     </AppLayout>
+
+    <!-- Success Toast Alert -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0 translate-y-4"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-4"
+        >
+            <div 
+                v-if="showSuccessAlert" 
+                class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4"
+            >
+                <Alert variant="default" class="shadow-lg border-gray-500/80">
+                    <CheckCircle2 class="h-4 w-4" />
+                    <AlertTitle class="font-semibold">Sådan!</AlertTitle>
+                    <AlertDescription>{{ successMessage }}</AlertDescription>
+                    <button 
+                        @click="dismissAlert" 
+                        class="absolute top-3 right-3 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </Alert>
+            </div>
+        </Transition>
+    </Teleport>
 </template>

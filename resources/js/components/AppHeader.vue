@@ -34,8 +34,9 @@ import { toUrl, urlIsActive } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
 import { InertiaLinkProps, Link, router, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search, FileText } from 'lucide-vue-next';
+import { BookOpen, Folder, LayoutGrid, Menu, Search, FileText, LogIn } from 'lucide-vue-next';
 import { computed } from 'vue';
+import { login } from '@/routes';
 
 interface Props {
     breadcrumbs?: BreadcrumbItem[];
@@ -47,6 +48,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
+const user = computed(() => auth.value?.user);
 
 const isCurrentRoute = computed(
     () => (url: NonNullable<InertiaLinkProps['href']>) =>
@@ -242,7 +244,21 @@ const rightNavItems: NavItem[] = [
                         </div>
                     </div>
 
-                    <DropdownMenu>
+                    <!-- Login button for guests -->
+                    <Button
+                        v-if="!user"
+                        variant="default"
+                        as-child
+                        class="h-9"
+                    >
+                        <Link :href="login()">
+                            <LogIn class="mr-2 h-4 w-4" />
+                            Log ind
+                        </Link>
+                    </Button>
+
+                    <!-- User dropdown for authenticated users -->
+                    <DropdownMenu v-else>
                         <DropdownMenuTrigger :as-child="true">
                             <Button
                                 variant="ghost"
@@ -253,20 +269,20 @@ const rightNavItems: NavItem[] = [
                                     class="size-8 overflow-hidden rounded-full"
                                 >
                                     <AvatarImage
-                                        v-if="auth.user.avatar"
-                                        :src="auth.user.avatar"
-                                        :alt="auth.user.name"
+                                        v-if="user.avatar"
+                                        :src="user.avatar"
+                                        :alt="user.name"
                                     />
                                     <AvatarFallback
                                         class="rounded-lg bg-neutral-200 font-semibold text-black dark:bg-neutral-700 dark:text-white"
                                     >
-                                        {{ getInitials(auth.user?.name) }}
+                                        {{ getInitials(user?.name) }}
                                     </AvatarFallback>
                                 </Avatar>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" class="w-56">
-                            <UserMenuContent :user="auth.user" />
+                            <UserMenuContent :user="user" />
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>

@@ -23,6 +23,7 @@ class Report extends Model
         'area_of_responsibility_id',
         'region_id',
         'user_id',
+        'guest_token',
         'uploaded_payslip_id',
         'status',
         'lower_percentile',

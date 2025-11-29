@@ -14,6 +14,9 @@ class Kernel extends ConsoleKernel
     {
         // Eksempel: Hent Reddit posts hver time
         // $schedule->command('reddit:fetch-posts')->hourly();
+
+        // Cleanup old guest report drafts daily at 2 AM
+        $schedule->command('reports:cleanup-guest-drafts')->dailyAt('02:00');
     }
 
     /**

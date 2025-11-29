@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login, register, getStarted } from '@/routes';
 import { Head, Link } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -105,8 +105,8 @@ onMounted(() => {
                                 Log ind
                             </Link>
                         </Button>
-                        <Button v-if="canRegister" as-child class="shadow-lg shadow-primary/25">
-                            <Link :href="register()">
+                        <Button as-child class="shadow-lg shadow-primary/25">
+                            <Link :href="getStarted()">
                                 Kom i gang
                                 <Sparkles class="size-4 ml-1" />
                             </Link>
@@ -149,8 +149,8 @@ onMounted(() => {
                             <Button as-child variant="outline" class="w-full">
                                 <Link :href="login()">Log ind</Link>
                             </Button>
-                            <Button v-if="canRegister" as-child class="w-full">
-                                <Link :href="register()">Kom i gang gratis</Link>
+                            <Button as-child class="w-full">
+                                <Link :href="getStarted()">Kom i gang gratis</Link>
                             </Button>
                         </template>
                     </div>
@@ -205,8 +205,8 @@ onMounted(() => {
                             
                             <!-- CTA -->
                             <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center animate-fade-in-up animation-delay-300">
-                                <Button v-if="canRegister" as-child size="lg" class="text-base px-8 h-14 shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-shadow">
-                                    <Link :href="register()">
+                                <Button as-child size="lg" class="text-base px-8 h-14 shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-shadow">
+                                    <Link :href="getStarted()">
                                         Kom i gang gratis
                                         <ArrowRight class="size-5 ml-2" />
                                     </Link>
@@ -563,9 +563,9 @@ onMounted(() => {
                                     </div>
                                 </div>
                                 
-                                <Button v-if="canRegister" as-child size="lg" variant="secondary" class="text-base px-10 h-14 text-primary font-semibold shadow-2xl hover:scale-105 transition-transform">
-                                    <Link :href="register()">
-                                        Opret gratis konto
+                                <Button as-child size="lg" variant="secondary" class="text-base px-10 h-14 text-primary font-semibold shadow-2xl hover:scale-105 transition-transform">
+                                    <Link :href="getStarted()">
+                                        Kom i gang gratis
                                         <ArrowRight class="size-5 ml-2" />
                                     </Link>
                                 </Button>

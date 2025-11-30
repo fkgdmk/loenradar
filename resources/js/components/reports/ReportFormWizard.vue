@@ -24,7 +24,8 @@ import {
     Sparkles,
     Pencil,
     LogIn,
-    Mail
+    Mail,
+    Image
 } from 'lucide-vue-next';
 import type { useReportForm } from '@/composables/useReportForm';
 
@@ -46,6 +47,9 @@ const props = withDefaults(defineProps<Props>(), {
 // Local state for contact email
 const contactEmail = ref('');
 
+// Drag and drop state
+const isDragging = ref(false);
+
 const emit = defineEmits<{
     submit: [];
 }>();
@@ -59,6 +63,46 @@ const rf = computed(() => props.reportForm);
 // Helper to handle file input click
 const handleFileInputClick = () => {
     localFileInputRef.value?.click();
+};
+
+// Drag and drop handlers
+const handleDragEnter = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDragging.value = true;
+};
+
+const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDragging.value = false;
+};
+
+const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+};
+
+const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDragging.value = false;
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+        const file = files[0];
+        // Check if file type is acceptable
+        const acceptedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (acceptedTypes.includes(file.type)) {
+            // Create a synthetic event-like object for handleFileChange
+            const syntheticEvent = {
+                target: {
+                    files: files
+                }
+            } as unknown as Event;
+            rf.value.handleFileChange(syntheticEvent);
+        }
+    }
 };
 
 // Helper to trigger edit anonymizer
@@ -246,17 +290,47 @@ const handleSubmit = () => {
                                 @change="rf.handleFileChange"
                             />
                             <div v-if="!rf.showAnonymizer.value">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    class="w-full"
+                                <!-- Drag and Drop Zone -->
+                                <div
                                     @click="handleFileInputClick"
+                                    @dragenter="handleDragEnter"
+                                    @dragleave="handleDragLeave"
+                                    @dragover="handleDragOver"
+                                    @drop="handleDrop"
+                                    :class="[
+                                        'relative flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 transition-all cursor-pointer',
+                                        isDragging 
+                                            ? 'border-primary bg-primary/10 scale-[1.02]' 
+                                            : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+                                    ]"
                                 >
-                                    <Upload class="mr-2 h-4 w-4" />
-                                    Vælg fil (PDF eller billede)
-                                </Button>
-                                <p class="mt-2 text-xs text-muted-foreground">
-                                    Du kan anonymisere direkte i browseren.
+                                    <div 
+                                        :class="[
+                                            'flex h-14 w-14 items-center justify-center rounded-full transition-colors',
+                                            isDragging ? 'bg-primary/20' : 'bg-muted'
+                                        ]"
+                                    >
+                                        <Image 
+                                            :class="[
+                                                'h-7 w-7 transition-colors',
+                                                isDragging ? 'text-primary' : 'text-muted-foreground'
+                                            ]" 
+                                        />
+                                    </div>
+                                    <div class="text-center">
+                                        <p :class="['font-medium', isDragging ? 'text-primary' : 'text-foreground']">
+                                            {{ isDragging ? 'Slip filen her' : 'Træk og slip din lønseddel her' }}
+                                        </p>
+                                        <p class="mt-1 text-sm text-muted-foreground">
+                                            eller <span class="text-primary font-medium">klik for at vælge</span>
+                                        </p>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground">
+                                        PDF eller billede (JPG, PNG, WebP)
+                                    </p>
+                                </div>
+                                <p class="mt-3 text-xs text-muted-foreground text-center">
+                                    Du kan anonymisere direkte i browseren efter upload.
                                 </p>
                                 <InputError :message="rf.step1Errors.document" />
                             </div>

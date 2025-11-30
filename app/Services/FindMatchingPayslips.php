@@ -35,7 +35,7 @@ class FindMatchingPayslips
         $description = null;
 
         if ($matchingPayslips->count() < 5) {
-            $description = "Grundet begrænset data i {$report->region->name} for din profil er rapporten baseret på tal fra hele landet for dit erfaringsniveau. Brug tallene som et generelt pejlemærke for markedet.";
+            $description = "Grundet begrænset data i {$report->region->name} for din profil, er rapporten baseret på tal fra hele landet for dit erfaringsniveau. Brug tallene som et generelt pejlemærke for markedet. ";
 
             $matchingPayslips = $baseQuery->clone()
                 ->whereBetween('experience', $experienceRange)
@@ -53,7 +53,7 @@ class FindMatchingPayslips
         }
 
         if ($matchingPayslips->count() < 5) {
-            $description = "Rapporten viser det generelle lønniveau for hele landet på tværs af alle erfaringsniveauer, da vi mangler specifik data for din profil. Tallene er derfor kun vejledende.";
+            $description = "Rapporten viser det generelle lønniveau for hele landet, på tværs af alle erfaringsniveauer, da vi mangler mere data for din profil. Tallene er derfor kun vejledende.";
 
             $matchingPayslips = $baseQuery->clone()->get();
         }

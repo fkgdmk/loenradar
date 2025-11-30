@@ -162,7 +162,8 @@ const setupCanvas = () => {
 
     // Calculate base scale to fit container while maintaining aspect ratio
     const containerWidth = container.clientWidth;
-    const maxHeight = window.innerHeight * 0.5; // Max 50% of viewport height
+    // Desktop: 75%, Mobile: 50%
+    const maxHeight = window.innerHeight * (isMobile.value ? 0.5 : 0.75);
 
     // Calculate base scale based on container width
     baseScale.value = containerWidth / img.width;
@@ -350,7 +351,8 @@ const handleResize = () => {
 
         const img = originalImage.value;
         const containerWidth = container.clientWidth;
-        const maxHeight = window.innerHeight * 0.5;
+        // Desktop: 75%, Mobile: 50%
+        const maxHeight = window.innerHeight * (isMobile.value ? 0.5 : 0.75);
 
         baseScale.value = containerWidth / img.width;
         if (img.height * baseScale.value > maxHeight) {
@@ -514,7 +516,7 @@ const canUndo = () => historyIndex.value > 0;
         <div 
             ref="canvasContainerRef"
             class="relative w-full rounded-lg border bg-muted/30 overflow-auto"
-            :style="{ maxHeight: '50vh' }"
+            :style="{ maxHeight: isMobile ? '50vh' : '75vh' }"
         >
             <!-- Loading state -->
             <div v-if="isLoadingPdf" class="flex flex-col items-center justify-center h-64 gap-3">
@@ -569,8 +571,8 @@ const canUndo = () => historyIndex.value > 0;
                 class="w-full sm:w-auto"
                 @click="saveImage"
             >
-                <Check class="h-4 w-4 mr-2" />
-                Brug anonymiseret billede
+                <Check class="h-4 w-4 " />
+                Brug billede
             </Button>
         </div>
     </div>

@@ -23,9 +23,10 @@ defineProps<{
                         <div
                             class="mb-1 flex h-9 w-9 items-center justify-center rounded-md"
                         >
-                            <AppLogoIcon
-                                class="size-9 fill-current text-[var(--foreground)] dark:text-white"
-                            />
+                            <div class="relative flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25 transition-transform group-hover:scale-105">
+                                <AppLogoIcon class="size-5 text-primary-foreground" />
+                                <div class="absolute -inset-1 rounded-xl bg-primary/20 blur-md -z-10"></div>
+                            </div>
                         </div>
                         <span class="sr-only">{{ title }}</span>
                     </Link>

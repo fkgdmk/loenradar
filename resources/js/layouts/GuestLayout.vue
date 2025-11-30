@@ -54,7 +54,6 @@ const user = computed(() => page.props.auth?.user);
             <div class="container mx-auto px-4 md:px-6">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                     <div class="flex items-center gap-2">
-                        <AppLogoIcon class="size-4 text-muted-foreground" />
                         <span class="text-sm text-muted-foreground">
                             © {{ new Date().getFullYear() }} LønRadar
                         </span>

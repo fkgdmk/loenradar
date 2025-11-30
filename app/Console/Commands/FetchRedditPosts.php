@@ -156,30 +156,26 @@ class FetchRedditPosts extends Command
                         $savedCount++;
                         $this->line("   <fg=green>✓ Gemt til database (ID: {$payslip->id})</>");
 
-                        // Download og gem billede hvis det findes og ikke allerede er gemt
-                        if (!empty($post['url_overridden_by_dest'])) {
-                            $imageUrl = $post['url_overridden_by_dest'];
-                            
-                            // Tjek om det er et billede (reddit billeder eller imgur)
-                            if ($this->isImageUrl($imageUrl)) {
-                                // Tjek om billedet allerede er downloadet
-                                $existingMedia = $payslip->getMedia('documents')
-                                    ->first(function ($media) use ($imageUrl) {
-                                        return $media->getCustomProperty('source_url') === $imageUrl;
-                                    });
+                        // Download og gem billeder hvis de findes og ikke allerede er gemt
+                        $imageUrls = $this->extractImageUrls($post);
+                        foreach ($imageUrls as $imageUrl) {
+                            // Tjek om billedet allerede er downloadet
+                            $existingMedia = $payslip->getMedia('documents')
+                                ->first(function ($media) use ($imageUrl) {
+                                    return $media->getCustomProperty('source_url') === $imageUrl;
+                                });
 
-                                if ($existingMedia) {
-                                    $this->line("   <fg=gray>ℹ Billede allerede gemt</>");
-                                } else {
-                                    try {
-                                        $payslip->addMediaFromUrl($imageUrl)
-                                            ->withCustomProperties(['source_url' => $imageUrl])
-                                            ->toMediaCollection('documents');
-                                        
-                                        $this->line("   <fg=green>✓ Billede downloadet og gemt</>");
-                                    } catch (\Exception $e) {
-                                        $this->line("   <fg=yellow>⚠ Kunne ikke downloade billede: {$e->getMessage()}</>");
-                                    }
+                            if ($existingMedia) {
+                                $this->line("   <fg=gray>ℹ Billede allerede gemt</>");
+                            } else {
+                                try {
+                                    $payslip->addMediaFromUrl($imageUrl)
+                                        ->withCustomProperties(['source_url' => $imageUrl])
+                                        ->toMediaCollection('documents');
+                                    
+                                    $this->line("   <fg=green>✓ Billede downloadet og gemt</>");
+                                } catch (\Exception $e) {
+                                    $this->line("   <fg=yellow>⚠ Kunne ikke downloade billede: {$e->getMessage()}</>");
                                 }
                             }
                         }
@@ -398,30 +394,26 @@ class FetchRedditPosts extends Command
                     
                     $this->line("   <fg=green>✓ Gemt til database (ID: {$payslip->id})</>");
 
-                    // Download og gem billede hvis det findes og ikke allerede er gemt
-                    if (!empty($post['url_overridden_by_dest'])) {
-                        $imageUrl = $post['url_overridden_by_dest'];
-                        
-                        // Tjek om det er et billede (reddit billeder eller imgur)
-                        if ($this->isImageUrl($imageUrl)) {
-                            // Tjek om billedet allerede er downloadet
-                            $existingMedia = $payslip->getMedia('documents')
-                                ->first(function ($media) use ($imageUrl) {
-                                    return $media->getCustomProperty('source_url') === $imageUrl;
-                                });
+                    // Download og gem billeder hvis de findes og ikke allerede er gemt
+                    $imageUrls = $this->extractImageUrls($post);
+                    foreach ($imageUrls as $imageUrl) {
+                        // Tjek om billedet allerede er downloadet
+                        $existingMedia = $payslip->getMedia('documents')
+                            ->first(function ($media) use ($imageUrl) {
+                                return $media->getCustomProperty('source_url') === $imageUrl;
+                            });
 
-                            if ($existingMedia) {
-                                $this->line("   <fg=gray>ℹ Billede allerede gemt</>");
-                            } else {
-                                try {
-                                    $payslip->addMediaFromUrl($imageUrl)
-                                        ->withCustomProperties(['source_url' => $imageUrl])
-                                        ->toMediaCollection('documents');
-                                    
-                                    $this->line("   <fg=green>✓ Billede downloadet og gemt</>");
-                                } catch (\Exception $e) {
-                                    $this->line("   <fg=yellow>⚠ Kunne ikke downloade billede: {$e->getMessage()}</>");
-                                }
+                        if ($existingMedia) {
+                            $this->line("   <fg=gray>ℹ Billede allerede gemt</>");
+                        } else {
+                            try {
+                                $payslip->addMediaFromUrl($imageUrl)
+                                    ->withCustomProperties(['source_url' => $imageUrl])
+                                    ->toMediaCollection('documents');
+                                
+                                $this->line("   <fg=green>✓ Billede downloadet og gemt</>");
+                            } catch (\Exception $e) {
+                                $this->line("   <fg=yellow>⚠ Kunne ikke downloade billede: {$e->getMessage()}</>");
                             }
                         }
                     }
@@ -646,32 +638,28 @@ class FetchRedditPosts extends Command
             
             $result['saved'] = true;
 
-            // Download og gem billede hvis det findes og ikke allerede er gemt
-            if (!empty($post['url_overridden_by_dest'])) {
-                $imageUrl = $post['url_overridden_by_dest'];
-                
-                // Tjek om det er et billede (reddit billeder eller imgur)
-                if ($this->isImageUrl($imageUrl)) {
-                    // Tjek om billedet allerede er downloadet
-                    $existingMedia = $payslip->getMedia('documents')
-                        ->first(function ($media) use ($imageUrl) {
-                            return $media->getCustomProperty('source_url') === $imageUrl;
-                        });
+            // Download og gem billeder hvis de findes og ikke allerede er gemt
+            $imageUrls = $this->extractImageUrls($post);
+            foreach ($imageUrls as $imageUrl) {
+                // Tjek om billedet allerede er downloadet
+                $existingMedia = $payslip->getMedia('documents')
+                    ->first(function ($media) use ($imageUrl) {
+                        return $media->getCustomProperty('source_url') === $imageUrl;
+                    });
 
-                    if (!$existingMedia) {
-                        try {
-                            $payslip->addMediaFromUrl($imageUrl)
-                                ->withCustomProperties(['source_url' => $imageUrl])
-                                ->toMediaCollection('documents');
-                            
-                            $result['image_downloaded'] = true;
-                        } catch (\Exception $e) {
-                            // Ignorér billede fejl i bulk mode
-                            Log::warning('Kunne ikke downloade billede', [
-                                'url' => $imageUrl,
-                                'error' => $e->getMessage(),
-                            ]);
-                        }
+                if (!$existingMedia) {
+                    try {
+                        $payslip->addMediaFromUrl($imageUrl)
+                            ->withCustomProperties(['source_url' => $imageUrl])
+                            ->toMediaCollection('documents');
+                        
+                        $result['image_downloaded'] = true;
+                    } catch (\Exception $e) {
+                        // Ignorér billede fejl i bulk mode
+                        Log::warning('Kunne ikke downloade billede', [
+                            'url' => $imageUrl,
+                            'error' => $e->getMessage(),
+                        ]);
                     }
                 }
             }
@@ -707,10 +695,63 @@ class FetchRedditPosts extends Command
         }
         
         // Tjek om det er fra Reddit eller Imgur billede domæner
-        $imageDomains = ['i.redd.it', 'i.imgur.com', 'imgur.com'];
+        $imageDomains = ['i.redd.it', 'i.imgur.com', 'imgur.com', 'preview.redd.it'];
         $host = parse_url($url, PHP_URL_HOST);
         
         return in_array($host, $imageDomains);
+    }
+
+    /**
+     * Extract image URLs from a Reddit post
+     * Handles both url_overridden_by_dest and media_metadata formats
+     * 
+     * @return array<string> Array of image URLs
+     */
+    private function extractImageUrls(array $post): array
+    {
+        $imageUrls = [];
+
+        // Metode 1: Direkte billede link i url_overridden_by_dest
+        if (!empty($post['url_overridden_by_dest'])) {
+            $url = $post['url_overridden_by_dest'];
+            if ($this->isImageUrl($url)) {
+                $imageUrls[] = $url;
+            }
+        }
+
+        // Metode 2: Billeder i media_metadata (nyere Reddit posts)
+        if (!empty($post['media_metadata']) && is_array($post['media_metadata'])) {
+            foreach ($post['media_metadata'] as $mediaId => $media) {
+                // Tjek at det er et gyldigt billede
+                if (!isset($media['status']) || $media['status'] !== 'valid') {
+                    continue;
+                }
+                
+                if (!isset($media['e']) || $media['e'] !== 'Image') {
+                    continue;
+                }
+
+                // Hent den fulde størrelse billede URL fra 's' (source)
+                if (isset($media['s']['u'])) {
+                    // Reddit returnerer HTML-encoded URLs, så decode dem
+                    $url = html_entity_decode($media['s']['u']);
+                    $imageUrls[] = $url;
+                }
+            }
+        }
+
+        // Metode 3: Gallery posts
+        if (!empty($post['is_gallery']) && !empty($post['gallery_data']['items'])) {
+            foreach ($post['gallery_data']['items'] as $item) {
+                $mediaId = $item['media_id'] ?? null;
+                if ($mediaId && isset($post['media_metadata'][$mediaId]['s']['u'])) {
+                    $url = html_entity_decode($post['media_metadata'][$mediaId]['s']['u']);
+                    $imageUrls[] = $url;
+                }
+            }
+        }
+
+        return array_unique($imageUrls);
     }
 
     /**

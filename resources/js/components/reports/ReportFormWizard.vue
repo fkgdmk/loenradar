@@ -25,7 +25,11 @@ import {
     Pencil,
     LogIn,
     Mail,
-    Image
+    Image,
+    PencilRuler,
+    Edit,
+    Edit2Icon,
+    PenBoxIcon
 } from 'lucide-vue-next';
 import type { useReportForm } from '@/composables/useReportForm';
 
@@ -213,10 +217,6 @@ const handleSubmit = () => {
                 <div v-if="rf.currentStep.value === 1" class="space-y-6">
                     <!-- File Upload -->
                     <div>
-                        <Label v-if="!rf.showAnonymizer.value" class="mb-2 flex items-center gap-2">
-                            <Upload class="h-4 w-4" />
-                            Upload lønseddel
-                        </Label>
                         <div v-if="rf.uploadedFile.value" class="mt-2">
                             <div v-if="!rf.showAnonymizer.value" class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg border p-4">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
@@ -349,14 +349,11 @@ const handleSubmit = () => {
 
                     <!-- Job Title -->
                     <div v-if="rf.isDocumentUploaded.value">
-                        <CardDescription class="mb-4">
-                        Udfyld detaljer om din stilling
-                        </CardDescription>
+                        <CardTitle class="mb-6 flex items-center gap-2">
+                            <PenBoxIcon class="h-5 w-4" />
+                            Udfyld detaljer om din stilling
+                        </CardTitle>
 
-                        <Label class="mb-2 flex items-center gap-2">
-                            <Briefcase class="h-4 w-4" />
-                            Jobtitel
-                        </Label>
                         <Combobox
                             v-model="rf.form.job_title_id"
                             :options="rf.jobTitleOptions.value"

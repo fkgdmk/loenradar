@@ -75,7 +75,7 @@ const handleSubmit = () => {
 <template>
     <div class="flex flex-col gap-6 max-w-3xl mx-auto">
         <!-- Progress Indicator -->
-        <div class="flex items-center justify-center gap-2 sm:gap-8">
+        <div class="flex items-center justify-center gap-2 sm:gap-8 mb-4">
             <button
                 type="button"
                 @click="rf.navigateToStep(1)"
@@ -148,7 +148,7 @@ const handleSubmit = () => {
         <Card>
             <CardHeader>
                 <CardTitle>
-                    <span v-if="rf.currentStep.value === 1">Trin 1: Upload lønseddel og detaljer</span>
+                    <span v-if="rf.currentStep.value === 1">Trin 1: Upload lønseddel</span>
                     <span v-else-if="rf.currentStep.value === 2">Trin 2: Ansvar og færdigheder</span>
                     <span v-else>Trin 3: Opsummering</span>
                 </CardTitle>

@@ -45,7 +45,7 @@ const user = computed(() => page.props.auth?.user);
         </header>
         
         <!-- Main Content -->
-        <main class="container mx-auto px-4 py-8 md:px-6">
+        <main class="container mx-auto px-4 py-8 md:px-6 mb-20">
             <slot />
         </main>
         

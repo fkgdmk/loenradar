@@ -56,6 +56,8 @@ class UpdatePayslipPension extends Command
     private function updateCompanyPensionDKK(bool $dryRun): void
     {
         $payslips = Payslip::query()
+            ->whereNull('verified_at')
+            ->whereNull('denied_at')
             ->whereNotNull('company_pension_procent')
             ->whereNull('company_pension_dkk')
             ->whereNotNull('salary')

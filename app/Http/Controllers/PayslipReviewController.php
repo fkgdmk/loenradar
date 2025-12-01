@@ -21,6 +21,8 @@ class PayslipReviewController extends Controller
         
         if ($payslipId) {
             $payslip = Payslip::with(['jobTitle', 'areaOfResponsibility', 'region', 'media'])
+                ->whereNull('verified_at')
+                ->whereNull('denied_at')
                 ->find($payslipId);
         } else {
             // Find næste payslip der skal gennemgåsxt
@@ -33,7 +35,6 @@ class PayslipReviewController extends Controller
 
         // Tæl hvor mange der mangler at blive håndteret
         $pendingCount = Payslip::whereNotNull('job_title_id')
-            ->whereNotNull('salary')
             ->whereNull('verified_at')
             ->whereNull('denied_at')
             ->count();

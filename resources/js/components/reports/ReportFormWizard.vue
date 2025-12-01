@@ -528,7 +528,7 @@ const handleSubmit = () => {
                     <div v-if="showAuthPrompt" class="rounded-lg border border-primary/20 bg-primary/5 p-4">
                         <p class="text-center font-bold">
                             <Sparkles class="inline h-4 w-4 mr-1 text-primary" />
-                            Opret en gratis konto eller log ind for at se din personlige lønrapport
+                            Opret en gratis konto eller log ind for at se din personlige rapport
                         </p>
                     </div>
                 </div>

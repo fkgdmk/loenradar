@@ -22,7 +22,7 @@ class ImportTheHubJobs extends Command
     protected $signature = 'thehub:import-jobs
                             {url? : URL til et specifikt job (fx https://thehub.io/jobs/69174b99ec344369a26bd8e3)}
                             {--delay=3 : Sekunder mellem requests (rate limiting)}
-                            {--limit=50 : Maksimalt antal jobs der skal importeres}
+                            {--limit=200 : Maksimalt antal jobs der skal importeres}
                             {--dry-run : Vis jobs uden at gemme dem}';
 
     /**

@@ -287,6 +287,56 @@ class DashboardController extends Controller
                 ];
             });
 
+        // NY: Komplet oversigt - Jobtitler med verificerede lønsedler pr statistisk gruppe OG erfaringsniveau
+        $verifiedPayslipsPerJobTitleRegionExperience = DB::table('job_titles')
+            ->join('payslips', 'job_titles.id', '=', 'payslips.job_title_id')
+            ->join('regions', 'payslips.region_id', '=', 'regions.id')
+            ->join('media', function ($join) {
+                $join->on('payslips.id', '=', 'media.model_id')
+                    ->where('media.model_type', '=', 'App\\Models\\Payslip');
+            })
+            ->whereNotNull('payslips.verified_at')
+            ->whereNotNull('payslips.region_id')
+            ->whereNotNull('payslips.salary')
+            ->whereNotNull('regions.statistical_group')
+            ->whereNotNull('payslips.experience')
+            ->select(
+                'job_titles.name',
+                'regions.statistical_group as region_name',
+                DB::raw('CASE 
+                    WHEN payslips.experience <= 3 THEN "0-3 år"
+                    WHEN payslips.experience <= 9 THEN "4-9 år"
+                    ELSE "10+ år"
+                END as experience_range'),
+                DB::raw('COUNT(DISTINCT payslips.id) as count')
+            )
+            ->groupBy(
+                'job_titles.id',
+                'job_titles.name',
+                'regions.statistical_group',
+                DB::raw('CASE 
+                    WHEN payslips.experience <= 3 THEN "0-3 år"
+                    WHEN payslips.experience <= 9 THEN "4-9 år"
+                    ELSE "10+ år"
+                END')
+            )
+            ->orderBy('job_titles.name')
+            ->orderBy('regions.statistical_group')
+            ->orderByRaw('CASE 
+                WHEN payslips.experience <= 3 THEN 1
+                WHEN payslips.experience <= 9 THEN 2
+                ELSE 3
+            END')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'jobTitle' => $item->name,
+                    'region' => $item->region_name,
+                    'experienceRange' => $item->experience_range,
+                    'count' => $item->count,
+                ];
+            });
+
         return Inertia::render('Dashboard', [
             'statistics' => [
                 'verifiedPayslips' => $verifiedPayslipsCount,
@@ -302,6 +352,7 @@ class DashboardController extends Controller
             'experienceRanges' => $experienceRangesWithCounts,
             'jobTitlesWith5PlusPayslipsPerExperienceRangeList' => $jobTitlesWith5PlusPayslipsPerExperienceRangeList,
             'jobTitlesWith5PlusJobPostingsPerExperienceRangeList' => $jobTitlesWith5PlusJobPostingsPerExperienceRangeList,
+            'verifiedPayslipsPerJobTitleRegionExperience' => $verifiedPayslipsPerJobTitleRegionExperience,
         ]);
     }
 }

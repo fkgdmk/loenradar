@@ -291,10 +291,6 @@ class DashboardController extends Controller
         $verifiedPayslipsPerJobTitleRegionExperience = DB::table('job_titles')
             ->join('payslips', 'job_titles.id', '=', 'payslips.job_title_id')
             ->join('regions', 'payslips.region_id', '=', 'regions.id')
-            ->join('media', function ($join) {
-                $join->on('payslips.id', '=', 'media.model_id')
-                    ->where('media.model_type', '=', 'App\\Models\\Payslip');
-            })
             ->whereNotNull('payslips.verified_at')
             ->whereNotNull('payslips.region_id')
             ->whereNotNull('payslips.salary')
@@ -308,6 +304,11 @@ class DashboardController extends Controller
                     WHEN payslips.experience <= 9 THEN "4-9 år"
                     ELSE "10+ år"
                 END as experience_range'),
+                DB::raw('CASE 
+                    WHEN payslips.experience <= 3 THEN 1
+                    WHEN payslips.experience <= 9 THEN 2
+                    ELSE 3
+                END as experience_sort'),
                 DB::raw('COUNT(DISTINCT payslips.id) as count')
             )
             ->groupBy(
@@ -318,15 +319,14 @@ class DashboardController extends Controller
                     WHEN payslips.experience <= 3 THEN "0-3 år"
                     WHEN payslips.experience <= 9 THEN "4-9 år"
                     ELSE "10+ år"
+                END'),
+                DB::raw('CASE 
+                    WHEN payslips.experience <= 3 THEN 1
+                    WHEN payslips.experience <= 9 THEN 2
+                    ELSE 3
                 END')
             )
-            ->orderBy('job_titles.name')
-            ->orderBy('regions.statistical_group')
-            ->orderByRaw('CASE 
-                WHEN payslips.experience <= 3 THEN 1
-                WHEN payslips.experience <= 9 THEN 2
-                ELSE 3
-            END')
+            ->orderBy('count', 'desc')
             ->get()
             ->map(function ($item) {
                 return [

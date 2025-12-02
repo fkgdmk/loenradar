@@ -193,6 +193,72 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
             </div>
 
+            <!-- Komplet oversigt: Verificerede lønsedler pr jobtitel, statistisk gruppe og erfaringsniveau -->
+            <div class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar">
+                <h2 class="mb-4 text-lg font-semibold text-foreground">
+                    Komplet oversigt: Verificerede lønsedler pr jobtitel, statistisk gruppe og erfaringsniveau
+                </h2>
+                <div class="h-[500px] overflow-y-auto">
+                    <table class="w-full">
+                        <thead class="sticky top-0 bg-white dark:bg-sidebar">
+                            <tr class="border-b border-sidebar-border/50">
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-foreground">
+                                    Jobtitel
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-foreground">
+                                    Statistisk gruppe
+                                </th>
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-foreground">
+                                    Erfaringsniveau
+                                </th>
+                                <th class="px-4 py-3 text-right text-sm font-semibold text-foreground">
+                                    Verificerede lønsedler
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="(item, index) in verifiedPayslipsPerJobTitleRegionExperience"
+                                :key="`${item.jobTitle}-${item.region}-${item.experienceRange}-${index}`"
+                                class="border-b border-sidebar-border/30 transition-colors hover:bg-sidebar/50"
+                            >
+                                <td class="px-4 py-3 font-medium text-foreground">
+                                    {{ item.jobTitle }}
+                                </td>
+                                <td class="px-4 py-3 text-muted-foreground">
+                                    {{ item.region }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span
+                                        class="rounded-full px-2.5 py-1 text-xs font-medium"
+                                        :class="{
+                                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300': item.experienceRange === '0-3 år',
+                                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300': item.experienceRange === '4-9 år',
+                                            'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300': item.experienceRange === '10+ år'
+                                        }"
+                                    >
+                                        {{ item.experienceRange }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <span
+                                        class="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                    >
+                                        {{ item.count }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div
+                        v-if="verifiedPayslipsPerJobTitleRegionExperience.length === 0"
+                        class="py-8 text-center text-muted-foreground"
+                    >
+                        Ingen data fundet
+                    </div>
+                </div>
+            </div>
+
             <!-- Liste sektioner -->
             <div class="grid gap-4 md:grid-cols-3">
                 <!-- Jobtitler Liste -->
@@ -462,71 +528,6 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
             </div>
 
-            <!-- Komplet oversigt: Verificerede lønsedler pr jobtitel, statistisk gruppe og erfaringsniveau -->
-            <div class="rounded-xl border border-sidebar-border/70 bg-white p-6 dark:border-sidebar-border dark:bg-sidebar">
-                <h2 class="mb-4 text-lg font-semibold text-foreground">
-                    Komplet oversigt: Verificerede lønsedler pr jobtitel, statistisk gruppe og erfaringsniveau
-                </h2>
-                <div class="h-[500px] overflow-y-auto">
-                    <table class="w-full">
-                        <thead class="sticky top-0 bg-white dark:bg-sidebar">
-                            <tr class="border-b border-sidebar-border/50">
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                                    Jobtitel
-                                </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                                    Statistisk gruppe
-                                </th>
-                                <th class="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                                    Erfaringsniveau
-                                </th>
-                                <th class="px-4 py-3 text-right text-sm font-semibold text-foreground">
-                                    Verificerede lønsedler
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="(item, index) in verifiedPayslipsPerJobTitleRegionExperience"
-                                :key="`${item.jobTitle}-${item.region}-${item.experienceRange}-${index}`"
-                                class="border-b border-sidebar-border/30 transition-colors hover:bg-sidebar/50"
-                            >
-                                <td class="px-4 py-3 font-medium text-foreground">
-                                    {{ item.jobTitle }}
-                                </td>
-                                <td class="px-4 py-3 text-muted-foreground">
-                                    {{ item.region }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span
-                                        class="rounded-full px-2.5 py-1 text-xs font-medium"
-                                        :class="{
-                                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300': item.experienceRange === '0-3 år',
-                                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300': item.experienceRange === '4-9 år',
-                                            'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300': item.experienceRange === '10+ år'
-                                        }"
-                                    >
-                                        {{ item.experienceRange }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <span
-                                        class="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                    >
-                                        {{ item.count }}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div
-                        v-if="verifiedPayslipsPerJobTitleRegionExperience.length === 0"
-                        class="py-8 text-center text-muted-foreground"
-                    >
-                        Ingen data fundet
-                    </div>
-                </div>
-            </div>
         </div>
     </AppLayout>
 </template>

@@ -983,6 +983,6 @@ class ReportsController extends Controller
         $d0 = $sortedData[$floor];
         $d1 = $sortedData[$ceil];
 
-        return $d0 + ($d1 - $d0) * ($index - $floor);
+        return round($d0 + ($d1 - $d0) * ($index - $floor), 0);
     }
 }

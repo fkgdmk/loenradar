@@ -15,6 +15,7 @@ class ProsaJobCategory extends Model
      */
     protected $fillable = [
         'category_name',
+        'description',
     ];
 
     /**

@@ -43,6 +43,7 @@ interface ProsaSalaryStat {
 interface ProsaJobCategory {
     id: number;
     category_name: string;
+    description: string | null;
     salary_stats: ProsaSalaryStat[];
 }
 
@@ -137,6 +138,14 @@ const formatCurrency = (amount: number) => {
         currency: 'DKK',
         maximumFractionDigits: 0,
     }).format(amount);
+};
+
+const roundToThousands = (amount: number) => {
+    return Math.round(amount / 1000) * 1000;
+};
+
+const formatCurrencyRounded = (amount: number) => {
+    return formatCurrency(roundToThousands(amount));
 };
 
 const formatDate = (dateString: string) => {
@@ -317,9 +326,9 @@ const isSkillMatching = (skillId: number): boolean => {
                                 </DialogContent>
                             </Dialog>
                             for din profil, er et realistisk og velbegrundet lønudspil i intervallet 
-                            <span class="font-bold">{{ formatCurrency(report.lower_percentile) }}</span> 
+                            <span class="font-bold">{{ formatCurrencyRounded(report.lower_percentile) }}</span> 
                             til 
-                            <span class="font-bold">{{ formatCurrency(report.upper_percentile) }}</span>.
+                            <span class="font-bold">{{ formatCurrencyRounded(report.upper_percentile) }}</span>.
                         </p>
                     </CardContent>
                 </Card>
@@ -411,15 +420,15 @@ const isSkillMatching = (skillId: number): boolean => {
                                 <div class="grid grid-cols-3 gap-1.5 sm:gap-3">
                                     <div class="text-center p-2 sm:p-3 rounded-lg bg-muted/50">
                                         <div class="text-[9px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Nedre (25%)</div>
-                                        <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrency(report.lower_percentile) }}</div>
+                                        <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrencyRounded(report.lower_percentile) }}</div>
                                     </div>
                                     <div class="text-center p-2 sm:p-3 rounded-lg bg-primary/10 border border-primary/20">
                                         <div class="text-[9px] sm:text-xs text-primary font-medium mb-0.5 sm:mb-1">Median (50%)</div>
-                                        <div class="text-sm sm:text-lg font-bold text-primary truncate">{{ formatCurrency(report.median) }}</div>
+                                        <div class="text-sm sm:text-lg font-bold text-primary truncate">{{ formatCurrencyRounded(report.median) }}</div>
                                     </div>
                                     <div class="text-center p-2 sm:p-3 rounded-lg bg-muted/50">
                                         <div class="text-[9px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Øvre (75%)</div>
-                                        <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrency(report.upper_percentile) }}</div>
+                                        <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrencyRounded(report.upper_percentile) }}</div>
                                     </div>
                                 </div>
 
@@ -437,7 +446,25 @@ const isSkillMatching = (skillId: number): boolean => {
                                 <div>
                                     <CardTitle class="text-base sm:text-lg">Fagforenings Statistik (PROSA)</CardTitle>
                                     <CardDescription class="text-xs sm:text-sm">
-                                        Lønstatistik for {{ report.job_title.prosa_categories[0].category_name }}
+                                            Prosa's lønsstatistik er baseret på 5 forskellige grupper. Din rolle ligger i gruppen: <span class="font-bold">{{ report.job_title.prosa_categories[0].category_name }}</span>
+                                            <Dialog>
+                                                <DialogTrigger as-child>
+                                                    <button class="ml-1 text-primary hover:text-primary/80 underline cursor-pointer transition-colors">
+                                                        (Læs mere her)
+                                                    </button>
+                                                </DialogTrigger>
+                                                <DialogContent class="sm:max-w-lg">
+                                                    <DialogHeader>
+                                                        <DialogTitle>{{ report.job_title.prosa_categories[0].category_name }}</DialogTitle>
+                                                        <DialogDescription>
+                                                            PROSA jobkategori beskrivelse
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div class="prose prose-sm dark:prose-invert max-w-none">
+                                                        <p class="whitespace-pre-line text-sm leading-relaxed">{{ report.job_title.prosa_categories[0].description }}</p>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
                                     </CardDescription>
                                 </div>
                                 <a href="https://www.prosa.dk/raad-og-svar/loenstatistik" target="_blank" rel="noopener noreferrer">

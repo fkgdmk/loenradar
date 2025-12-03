@@ -27,6 +27,7 @@ class FindMatchingJobPostings
 
         // Find alle job postings med samme job_title_id og load skills
         $matchingJobPostings = JobPosting::where('job_title_id', $report->job_title_id)
+            ->whereNotNull('salary_from')
             ->with('skills:id')
             ->get();
 

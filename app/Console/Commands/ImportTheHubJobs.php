@@ -30,7 +30,7 @@ class ImportTheHubJobs extends Command
      *
      * @var string
      */
-    protected $description = 'Importer danske jobs fra thehub.io med salary information';
+    protected $description = 'Importer danske jobs fra thehub.io';
 
     /**
      * Base URL for The Hub jobs
@@ -72,7 +72,7 @@ class ImportTheHubJobs extends Command
                 'UX/UI Designer' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=uxuidesigner&countryCode=DK&sorting=newJobs',
                 'Product Manager' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=productmanagement&countryCode=DK&sorting=newJobs',
                 'Data Analyst' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=analyst&countryCode=DK&sorting=newJobs', 
-                'Projektleder' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=projectmanagement&countryCode=DK&sorting=newJobs',
+                // 'Projektleder' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=projectmanagement&countryCode=DK&sorting=newJobs',
                 'Softwareudvikler' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&roles=engineer&countryCode=DK&sorting=newJobs',
                 'Softwareudvikler' => 'https://thehub.io/jobs?positionTypes=5b8e46b3853f039706b6ea70&search=software%20developer&countryCode=DK&sorting=newJobs',
                 'Marketingchef' => 'https://thehub.io/jobs?roles=marketing&search=Manager&countryCode=DK&sorting=newJobs&positionTypes=5b8e46b3853f039706b6ea70',
@@ -106,6 +106,13 @@ class ImportTheHubJobs extends Command
                     }
     
                     try {
+                        // Tjek om jobbet allerede eksisterer i databasen før vi henter details
+                        if (JobPosting::where('url', $jobUrl)->exists()) {
+                            $this->comment("  ⏭️  Job URL eksisterer allerede i databasen - springer over");
+                            $skipped++;
+                            continue;
+                        }
+
                         $jobData = $this->fetchJobDetails($jobUrl);
 
                         $jobData['job_title_id'] = JobTitle::where('name', $jobTitle)->first()?->id;
@@ -113,13 +120,6 @@ class ImportTheHubJobs extends Command
                         if (!$jobData) {
                             $this->warn("  ⚠️  Kunne ikke hente job data");
                             $errors++;
-                            continue;
-                        }
-    
-                        // Tjek om salary er tilgængelig
-                        if (!$this->hasSalary($jobData)) {
-                            $this->warn("  ⚠️  Ingen salary information - springer over");
-                            $skipped++;
                             continue;
                         }
     
@@ -1148,6 +1148,12 @@ class ImportTheHubJobs extends Command
             $this->warn('DRY RUN mode - jobbet vil ikke blive gemt');
         }
 
+        // Tjek om jobbet allerede eksisterer i databasen
+        if (JobPosting::where('url', $url)->exists()) {
+            $this->warn('⚠️  Job URL eksisterer allerede i databasen');
+            return Command::SUCCESS;
+        }
+
         try {
             $jobData = $this->fetchJobDetails($url);
 
@@ -1159,13 +1165,6 @@ class ImportTheHubJobs extends Command
             // Vis job data
             $this->displayJobData($jobData);
             $this->newLine();
-
-            // Tjek om salary er tilgængelig
-            if (!$this->hasSalary($jobData)) {
-                $this->warn('⚠️  Ingen salary information fundet');
-                $this->warn('Dette job vil IKKE blive importeret (kun jobs med salary importeres)');
-                return Command::SUCCESS;
-            }
 
             if ($dryRun) {
                 $this->comment('[DRY RUN] Jobbet ville blive gemt');

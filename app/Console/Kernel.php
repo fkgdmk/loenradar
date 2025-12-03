@@ -16,7 +16,7 @@ class Kernel extends ConsoleKernel
         // $schedule->command('reddit:fetch-posts')->hourly();
 
         // Cleanup old guest report drafts daily at 2 AM
-        $schedule->command('reports:cleanup-guest-drafts')->dailyAt('02:00');
+        // $schedule->command('reports:cleanup-guest-drafts')->dailyAt('02:00');
     }
 
     /**

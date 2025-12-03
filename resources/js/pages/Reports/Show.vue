@@ -147,6 +147,13 @@ const formatDate = (dateString: string) => {
     });
 };
 
+const formatMonthYear = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('da-DK', {
+        month: 'long',
+        year: 'numeric',
+    });
+};
+
 const breadcrumbs = [
     {
         title: 'Dashboard',
@@ -280,19 +287,18 @@ const isSkillMatching = (skillId: number): boolean => {
                                         {{ report.payslips.length }} datapunkter
                                     </span>
                                 </DialogTrigger>
-                                <DialogContent class="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+                                <DialogContent class="sm:max-w-xl max-h-[80vh] overflow-y-auto">
                                     <DialogHeader>
-                                        <DialogTitle>Datagrundlag</DialogTitle>
+                                        <DialogTitle>Lønsedler</DialogTitle>
                                         <DialogDescription>
-                                            Herunder ses de anonymiserede lønsedler der danner grundlag for rapporten.
+                                            Herunder ses lønsedlerne der danner grundlag for rapporten. Løn er ikke vist for at sikre anonymitet.
                                         </DialogDescription>
                                     </DialogHeader>
-                                    <div class="mt-4">
+                                    <div class="">
                                         <div class="rounded-md border">
                                             <table class="w-full text-sm">
                                                 <thead class="border-b bg-muted/50">
                                                     <tr>
-                                                        <th class="p-4 text-left font-medium">Løn</th>
                                                         <th class="p-4 text-left font-medium">Region</th>
                                                         <th class="p-4 text-left font-medium">Erfaring</th>
                                                         <th class="p-4 text-left font-medium">Uploadet</th>
@@ -300,10 +306,9 @@ const isSkillMatching = (skillId: number): boolean => {
                                                 </thead>
                                                 <tbody>
                                                     <tr v-for="payslip in report.payslips" :key="payslip.id" class="border-b last:border-0 hover:bg-muted/50">
-                                                        <td class="p-4 font-medium">{{ formatCurrency(payslip.total_salary_dkk) }}</td>
                                                         <td class="p-4">{{ payslip.region?.name }}</td>
                                                         <td class="p-4">{{ payslip.experience }} år</td>
-                                                        <td class="p-4 text-muted-foreground">{{ formatDate(payslip.uploaded_at) }}</td>
+                                                        <td class="p-4 text-muted-foreground">{{ formatMonthYear(payslip.uploaded_at) }}</td>
                                                     </tr>
                                                 </tbody>
                                             </table>

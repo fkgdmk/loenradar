@@ -11,6 +11,7 @@ use App\Models\ResponsibilityLevel;
 use App\Models\Skill;
 use App\Services\FindMatchingJobPostings;
 use App\Services\FindMatchingPayslips;
+use App\Services\ReportConclusionGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -683,6 +684,8 @@ class ReportsController extends Controller
             $result = $findMatchingPayslips->find($report);
             $matchingPayslips = $result['payslips'];
             $description = $result['description'];
+            $matchType = $result['match_type'];
+            $metadata = $result['metadata'];
 
             $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
             $count = $salaries->count();
@@ -700,21 +703,20 @@ class ReportsController extends Controller
                 $report->payslips()->sync($matchingPayslips->pluck('id'));
             }
 
-            $conclusion = "Baseret på {$count} datapunkter for din profil, er et realistisk og velbegrundet lønudspil i intervallet " . number_format($lower, 0, ',', '.') . " kr. til " . number_format($upper, 0, ',', '.') . " kr.";
-
-            // Mark report as completed
+            // Mark report as completed with statistics and match data
             $report->update([
                 'status' => 'completed',
                 'lower_percentile' => $lower,
                 'median' => $median,
                 'upper_percentile' => $upper,
-                'conclusion' => $conclusion,
                 'description' => $description,
+                'payslip_match' => $matchType->value,
+                'match_metadata' => $metadata,
             ]);
 
-            // Find and attach matching job postings
-            $findMatchingJobPostings = new FindMatchingJobPostings();
-            $findMatchingJobPostings->findAndAttach($report);
+            // Generate conclusion using dedicated service
+            $conclusionGenerator = new ReportConclusionGenerator();
+            $conclusionGenerator->generate($report);
 
             // Find and attach matching job postings
             $findMatchingJobPostings = new FindMatchingJobPostings();
@@ -928,6 +930,8 @@ class ReportsController extends Controller
             $result = $findMatchingPayslips->find($report);
             $matchingPayslips = $result['payslips'];
             $description = $result['description'];
+            $matchType = $result['match_type'];
+            $metadata = $result['metadata'];
 
             $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
             $count = $salaries->count();
@@ -945,15 +949,18 @@ class ReportsController extends Controller
                 $report->payslips()->sync($matchingPayslips->pluck('id'));
             }
 
-            $conclusion = "Baseret på {$count} datapunkter for din profil, er et realistisk og velbegrundet lønudspil i intervallet " . number_format($lower, 0, ',', '.') . " kr. til " . number_format($upper, 0, ',', '.') . " kr.";
-
             $report->update([
                 'lower_percentile' => $lower,
                 'median' => $median,
                 'upper_percentile' => $upper,
-                'conclusion' => $conclusion,
                 'description' => $description,
+                'payslip_match' => $matchType->value,
+                'match_metadata' => $metadata,
             ]);
+
+            // Generate conclusion using dedicated service
+            $conclusionGenerator = new ReportConclusionGenerator();
+            $conclusionGenerator->generate($report);
 
             // Find og forbind matchende job postings
             $findMatchingJobPostings = new FindMatchingJobPostings();

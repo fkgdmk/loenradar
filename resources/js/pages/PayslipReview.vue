@@ -519,7 +519,8 @@ const handleFileChange = (event: Event) => {
                                 </Button>
                             </div>
                             <div v-if="!isEditingSalary" class="mt-1">
-                                <p class="text-xl font-semibold">{{ payslip.salary?.toLocaleString('da-DK') }} kr.</p>
+                                <p v-if="payslip.salary !== null" class="text-xl font-semibold">{{ payslip.salary?.toLocaleString('da-DK') }} kr.</p>
+                                <p v-else class="text-muted-foreground italic">Ikke angivet</p>
                             </div>
                             <div v-else class="mt-1 flex gap-2">
                                 <Input 
@@ -777,7 +778,7 @@ const handleFileChange = (event: Event) => {
                                 </Button>
                             </div>
                             <div v-if="!isEditingJobTitle" class="mt-1">
-                                <p v-if="payslip.job_title">{{ payslip.job_title }}</p>
+                                <p v-if="payslip.job_title" class="text-xl font-semibold">{{ payslip.job_title }}</p>
                                 <p v-else class="text-muted-foreground italic">Ingen jobtitel valgt</p>
                             </div>
                             <div v-else class="mt-1 flex gap-2">
@@ -817,7 +818,7 @@ const handleFileChange = (event: Event) => {
 
                         <div v-if="payslip.sub_job_title">
                             <h3 class="text-sm font-medium text-muted-foreground">Under-jobtitel</h3>
-                            <p class="mt-1">{{ payslip.sub_job_title }}</p>
+                            <p class="mt-1 text-xl font-semibold">{{ payslip.sub_job_title }}</p>
                         </div>
 
                         <Separator v-if="payslip.sub_job_title" />
@@ -836,7 +837,7 @@ const handleFileChange = (event: Event) => {
                                 </Button>
                             </div>
                             <div v-if="!isEditingExperience" class="mt-1">
-                                <p v-if="payslip.experience !== null">{{ payslip.experience }}</p>
+                                <p v-if="payslip.experience !== null" class="text-xl font-semibold">{{ payslip.experience }}</p>
                                 <p v-else class="text-muted-foreground italic">Ingen erfaring angivet</p>
                             </div>
                             <div v-else class="mt-1 flex gap-2">
@@ -882,7 +883,7 @@ const handleFileChange = (event: Event) => {
                                 </Button>
                             </div>
                             <div v-if="!isEditingAreaOfResponsibility" class="mt-1">
-                                <p v-if="payslip.area_of_responsibility">{{ payslip.area_of_responsibility }}</p>
+                                <p v-if="payslip.area_of_responsibility" class="text-xl font-semibold">{{ payslip.area_of_responsibility }}</p>
                                 <p v-else class="text-muted-foreground italic">Intet ansvarsområde valgt</p>
                             </div>
                             <div v-else class="mt-1 flex gap-2">
@@ -934,7 +935,7 @@ const handleFileChange = (event: Event) => {
                                 </Button>
                             </div>
                             <div v-if="!isEditingRegion" class="mt-1">
-                                <p v-if="payslip.region">{{ payslip.region }}</p>
+                                <p v-if="payslip.region" class="text-xl font-semibold">{{ payslip.region }}</p>
                                 <p v-else class="text-muted-foreground italic">Ingen region valgt</p>
                             </div>
                             <div v-else class="mt-1 flex gap-2">

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Payslip;
 use App\Services\PayslipAnalyzer;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 
 class AnalyzePayslips extends Command
@@ -17,7 +18,8 @@ class AnalyzePayslips extends Command
     protected $signature = 'payslips:analyze 
                             {--limit= : Antal payslips der skal analyseres}
                             {--id= : Analyser kun et specifikt payslip ID}
-                            {--estimate : Vis kun omkostningsestimat}';
+                            {--estimate : Vis kun omkostningsestimat}
+                            {--fetch-reddit : Hent Reddit posts først, derefter kør hele pipelinen}';
 
     /**
      * The console command description.
@@ -30,6 +32,102 @@ class AnalyzePayslips extends Command
      * Execute the console command.
      */
     public function handle(PayslipAnalyzer $analyzer): int
+    {
+        $fetchReddit = $this->option('fetch-reddit');
+
+        // Hvis --fetch-reddit er sat, kør hele pipelinen
+        if ($fetchReddit) {
+            return $this->runFullPipeline($analyzer);
+        }
+
+        // Ellers kør kun analyse
+        return $this->runAnalysis($analyzer);
+    }
+
+    /**
+     * Kør hele pipelinen: Fetch Reddit -> Extract Job Titles -> Analyze -> Extract Details
+     */
+    private function runFullPipeline(PayslipAnalyzer $analyzer): int
+    {
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        $this->info('🚀 Starter fuld payslip pipeline...');
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        $this->newLine();
+
+        // Trin 1: Hent Reddit posts
+        $this->info('📥 TRIN 1/4: Henter Reddit posts...');
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        $exitCode = Artisan::call('reddit:fetch-posts', [
+            '--bulk' => true,
+            '--bulk-limit' => $this->option('limit') ?? 200, 
+            '--save' => true,
+        ], $this->output);
+
+        if ($exitCode !== Command::SUCCESS) {
+            $this->error('❌ Fejl ved hentning af Reddit posts');
+            return $exitCode;
+        }
+        
+        $this->newLine();
+        $this->info('✅ Reddit posts hentet succesfuldt');
+        $this->newLine(2);
+
+        // Trin 2: Ekstrahér job titler
+        $this->info('📝 TRIN 2/4: Ekstraherer job titler...');
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        $exitCode = Artisan::call('payslips:extract-job-titles', [], $this->output);
+
+        if ($exitCode !== Command::SUCCESS) {
+            $this->error('❌ Fejl ved ekstraktion af job titler');
+            return $exitCode;
+        }
+        
+        $this->newLine();
+        $this->info('✅ Job titler ekstraheret succesfuldt');
+        $this->newLine(2);
+
+        // Trin 3: Analyser payslips (den eksisterende logik)
+        $this->info('🔍 TRIN 3/4: Analyserer lønsedler...');
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        $exitCode = $this->runAnalysis($analyzer);
+
+        if ($exitCode !== Command::SUCCESS) {
+            $this->error('❌ Fejl ved analyse af payslips');
+            return $exitCode;
+        }
+        
+        $this->newLine();
+        $this->info('✅ Lønsedler analyseret succesfuldt');
+        $this->newLine(2);
+
+        // Trin 4: Ekstrahér payslip detaljer
+        $this->info('📊 TRIN 4/4: Ekstraherer payslip detaljer...');
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        $exitCode = Artisan::call('payslips:extract-details', [], $this->output);
+
+        if ($exitCode !== Command::SUCCESS) {
+            $this->error('❌ Fejl ved ekstraktion af payslip detaljer');
+            return $exitCode;
+        }
+        
+        $this->newLine(2);
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        $this->info('🎉 FULD PIPELINE AFSLUTTET SUCCESFULDT!');
+        $this->info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        Log::info('Fuld payslip pipeline afsluttet');
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Kør kun analyse af payslips
+     */
+    private function runAnalysis(PayslipAnalyzer $analyzer): int
     {
         $limit = $this->option('limit');
         $specificId = $this->option('id');
@@ -73,18 +171,11 @@ class AnalyzePayslips extends Command
             return Command::SUCCESS;
         }
 
-        // Spørg om bekræftelse
-        // if (!$this->confirm('Vil du fortsætte med analysen?', true)) {
-        //     $this->info('Analyse annulleret');
-        //     return Command::SUCCESS;
-        // }
-
         $this->newLine();
 
         // Analyser hver payslip
         $successCount = 0;
         $failCount = 0;
-        $totalCost = 0;
 
         $progressBar = $this->output->createProgressBar($payslips->count());
         $progressBar->start();

@@ -25,7 +25,7 @@ class FetchRedditPosts extends Command
                             {--save : Gem posts til databasen}
                             {--bulk : Hent posts i bulk med pagination (ignorer limit)}
                             {--bulk-limit=1000 : Antal posts ved bulk import}
-                            {--delay=5 : Sekunder mellem requests (rate limiting)}';
+                            {--delay=2 : Sekunder mellem requests (rate limiting)}';
 
     /**
      * The console command description.

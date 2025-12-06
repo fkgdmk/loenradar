@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PayslipMatchType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -33,6 +34,8 @@ class Report extends Model
         'conclusion',
         'description',
         'filters',
+        'payslip_match',
+        'match_metadata',
     ];
 
     /**
@@ -45,6 +48,8 @@ class Report extends Model
         'median' => 'decimal:2',
         'upper_percentile' => 'decimal:2',
         'filters' => 'array',
+        'match_metadata' => 'array',
+        'payslip_match' => PayslipMatchType::class,
     ];
 
     /**

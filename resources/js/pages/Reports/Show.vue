@@ -245,6 +245,30 @@ const isSkillMatching = (skillId: number): boolean => {
     return getReportSkillIds().includes(skillId);
 };
 
+// Parse simple markdown (bold, italic, and line breaks) to HTML
+const parseMarkdown = (text: string): string => {
+    if (!text) return '';
+    return text
+        // Special handling for "Anbefalet lønudspil:" - only the salary range after gets primary color
+        .replace(/(🎯 \*\*Anbefalet lønudspil:\*\*) (.+)$/m, '$1 <span class="recommendation">$2</span>')
+        // Special handling for "Forventet lønspænd:" - only the salary range after gets primary color
+        .replace(/(🎯 \*\*Forventet lønspænd:\*\*) (.+)$/m, '$1 <span class="recommendation">$2</span>')
+        .replace(/(📊 \*\*Løninterval:\*\*) (.+)$/m, '$1 <span class="recommendation">$2</span>')
+        // Convert **text** to <strong>text</strong> (must be before italic)
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        // Convert *text* to <em>text</em> (italic)
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        // Convert double newlines to paragraph breaks
+        .replace(/\n\n/g, '</p><p class="mt-3">')
+        // Wrap in paragraph
+        .replace(/^/, '<p>')
+        .replace(/$/, '</p>');
+};
+
+const formattedConclusion = computed(() => {
+    return parseMarkdown(props.report.conclusion || '');
+});
+
 </script>
 
 <template>
@@ -286,14 +310,12 @@ const isSkillMatching = (skillId: number): boolean => {
                             <TrendingUp class="h-5 w-5" />
                             Konklusion
                         </CardTitle>
-                    </CardHeader>
-                    <CardContent class="flex-1 flex items-center">
-                        <p class="text-lg font-medium leading-relaxed">
+                        <CardDescription>
                             Baseret på 
                             <Dialog>
                                 <DialogTrigger as-child>
-                                    <span class="font-bold underline cursor-pointer hover:text-primary transition-colors">
-                                        {{ report.payslips.length }} datapunkter
+                                    <span class="font-semibold underline cursor-pointer hover:text-primary transition-colors">
+                                        {{ report.payslips.length }} lønsedler
                                     </span>
                                 </DialogTrigger>
                                 <DialogContent class="sm:max-w-xl max-h-[80vh] overflow-y-auto">
@@ -325,11 +347,13 @@ const isSkillMatching = (skillId: number): boolean => {
                                     </div>
                                 </DialogContent>
                             </Dialog>
-                            for din profil, er et realistisk og velbegrundet lønudspil i intervallet 
-                            <span class="font-bold">{{ formatCurrencyRounded(report.lower_percentile) }}</span> 
-                            til 
-                            <span class="font-bold">{{ formatCurrencyRounded(report.upper_percentile) }}</span>.
-                        </p>
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent class="flex-1">
+                        <div 
+                            class="text-base leading-relaxed prose prose-sm dark:prose-invert max-w-none [&_strong]:font-semibold [&_p]:mb-0 [&_.recommendation]:text-primary [&_.recommendation]:font-semibold"
+                            v-html="formattedConclusion"
+                        ></div>
                     </CardContent>
                 </Card>
 

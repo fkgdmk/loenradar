@@ -103,11 +103,19 @@ interface Report {
     job_postings?: JobPosting[];
     filters?: {
         skill_ids?: number[];
+        responsibility_level_id?: number;
+        team_size?: number;
     };
+}
+
+interface ResponsibilityLevel {
+    id: number;
+    name: string;
 }
 
 const props = defineProps<{
     report: Report;
+    responsibilityLevel: ResponsibilityLevel | null;
 }>();
 
 // Flash message handling
@@ -290,41 +298,41 @@ const isSkillMatching = (skillId: number): boolean => {
                     <CardContent class="flex-1 flex items-center">
                         <p class="text-lg font-medium leading-relaxed">
                             Baseret på 
-                            <Dialog>
-                                <DialogTrigger as-child>
-                                    <span class="font-bold underline cursor-pointer hover:text-primary transition-colors">
+                                            <Dialog>
+                                                <DialogTrigger as-child>
+                                                    <span class="font-bold underline cursor-pointer hover:text-primary transition-colors">
                                         {{ report.payslips.length }} datapunkter
-                                    </span>
-                                </DialogTrigger>
-                                <DialogContent class="sm:max-w-xl max-h-[80vh] overflow-y-auto">
-                                    <DialogHeader>
-                                        <DialogTitle>Lønsedler</DialogTitle>
-                                        <DialogDescription>
-                                            Herunder ses lønsedlerne der danner grundlag for rapporten. Løn er ikke vist for at sikre anonymitet.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div class="">
-                                        <div class="rounded-md border">
-                                            <table class="w-full text-sm">
-                                                <thead class="border-b bg-muted/50">
-                                                    <tr>
-                                                        <th class="p-4 text-left font-medium">Region</th>
-                                                        <th class="p-4 text-left font-medium">Erfaring</th>
-                                                        <th class="p-4 text-left font-medium">Uploadet</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr v-for="payslip in report.payslips" :key="payslip.id" class="border-b last:border-0 hover:bg-muted/50">
-                                                        <td class="p-4">{{ payslip.region?.name }}</td>
-                                                        <td class="p-4">{{ payslip.experience }} år</td>
-                                                        <td class="p-4 text-muted-foreground">{{ formatMonthYear(payslip.uploaded_at) }}</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
+                                                    </span>
+                                                </DialogTrigger>
+                                                <DialogContent class="sm:max-w-xl max-h-[80vh] overflow-y-auto">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Lønsedler</DialogTitle>
+                                                        <DialogDescription>
+                                                            Herunder ses lønsedlerne der danner grundlag for rapporten. Løn er ikke vist for at sikre anonymitet.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div class="">
+                                                        <div class="rounded-md border">
+                                                            <table class="w-full text-sm">
+                                                                <thead class="border-b bg-muted/50">
+                                                                    <tr>
+                                                                        <th class="p-4 text-left font-medium">Region</th>
+                                                                        <th class="p-4 text-left font-medium">Erfaring</th>
+                                                                        <th class="p-4 text-left font-medium">Uploadet</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr v-for="payslip in report.payslips" :key="payslip.id" class="border-b last:border-0 hover:bg-muted/50">
+                                                                        <td class="p-4">{{ payslip.region?.name }}</td>
+                                                                        <td class="p-4">{{ payslip.experience }} år</td>
+                                                                        <td class="p-4 text-muted-foreground">{{ formatMonthYear(payslip.uploaded_at) }}</td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
                             for din profil, er et realistisk og velbegrundet lønudspil i intervallet 
                             <span class="font-bold">{{ formatCurrencyRounded(report.lower_percentile) }}</span> 
                             til 
@@ -358,6 +366,16 @@ const isSkillMatching = (skillId: number): boolean => {
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-muted-foreground">Region</span>
                                 <span class="font-medium">{{ report.region.name }}</span>
+                            </div>
+
+                            <div v-if="responsibilityLevel" class="flex justify-between items-center">
+                                <span class="text-sm text-muted-foreground">Rolle</span>
+                                <span class="font-medium text-right">{{ responsibilityLevel.name }}</span>
+                            </div>
+
+                            <div v-if="report.filters?.team_size && report.filters.team_size > 0" class="flex justify-between items-center">
+                                <span class="text-sm text-muted-foreground">Lederansvar</span>
+                                <span class="font-medium">{{ report.filters.team_size }} medarbejder{{ report.filters.team_size === 1 ? '' : 'e' }}</span>
                             </div>
                         </div>
                     </CardContent>

@@ -206,7 +206,7 @@ class ReportConclusionGenerator
         return $conclusion;
     }
 
-    /**
+    /**i
      * Konklusion med begrænset data (5-9 payslips)
      */
     private function generateLimitedDataConclusion(Report $report): string

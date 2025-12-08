@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AreaOfResponsibility;
+use App\Models\JobPosting;
 use App\Models\JobTitle;
 use App\Models\Payslip;
 use App\Models\Region;
@@ -722,6 +723,15 @@ class ReportsController extends Controller
             $findMatchingJobPostings = new FindMatchingJobPostings();
             $findMatchingJobPostings->findAndAttach($report);
 
+            // Count active job postings from thehub.io for this job title
+            $activeJobPostingsCount = JobPosting::where('job_title_id', $report->job_title_id)
+                ->where('source', 'thehub.io')
+                ->count();
+            
+            $report->update([
+                'active_job_postings_the_hub' => $activeJobPostingsCount,
+            ]);
+
             // Clear guest session token
             $request->session()->forget('guest_report_token');
 
@@ -965,6 +975,15 @@ class ReportsController extends Controller
             // Find og forbind matchende job postings
             $findMatchingJobPostings = new FindMatchingJobPostings();
             $findMatchingJobPostings->findAndAttach($report);
+
+            // Count active job postings from thehub.io for this job title
+            $activeJobPostingsCount = JobPosting::where('job_title_id', $report->job_title_id)
+                ->where('source', 'thehub.io')
+                ->count();
+            
+            $report->update([
+                'active_job_postings_the_hub' => $activeJobPostingsCount,
+            ]);
 
             DB::commit();
 

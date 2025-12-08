@@ -3,8 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Check, TrendingUp, Download, Share2, ExternalLink, Info, CheckCircle2, X } from 'lucide-vue-next';
+import { ArrowLeft, TrendingUp, ExternalLink, Info, CheckCircle2, X } from 'lucide-vue-next';
 import { computed, ref, onMounted } from 'vue';
 import {
   Dialog,
@@ -104,6 +103,7 @@ interface Report {
     filters?: {
         skill_ids?: number[];
     };
+    active_job_postings_the_hub: number;
 }
 
 const props = defineProps<{
@@ -177,13 +177,6 @@ const breadcrumbs = [
         href: '#',
     },
 ];
-
-const salaryRangeWidth = computed(() => {
-    if (!props.report.lower_percentile || !props.report.upper_percentile) return 0;
-    const min = props.report.lower_percentile * 0.8;
-    const max = props.report.upper_percentile * 1.2;
-    return max - min;
-});
 
 const getPosition = (value: number) => {
     if (!props.report.lower_percentile || !props.report.upper_percentile) return 0;
@@ -388,80 +381,108 @@ const formattedConclusion = computed(() => {
                 </Card>
             </div>
 
+            <!-- Salary Interval and Job Postings Row -->
+            <div class="grid gap-4 sm:gap-6 md:grid-cols-3">
+                <!-- Visualization Card -->
+                <Card :class="report.active_job_postings_the_hub > 0 ? 'md:col-span-2' : 'md:col-span-3'">
+                    <CardHeader>
+                        <CardTitle>Løninterval</CardTitle>
+                        <CardDescription>
+                            Visualisering af lønniveauet baseret på sammenlignelige profiler.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="space-y-4 sm:space-y-6">
+                            <!-- Salary Range Bar - Clean Minimal Design -->
+                            <div class="relative py-3">
+                                <!-- Main track -->
+                                <div class="relative h-2.5 bg-muted/60 rounded-full">
+                                    <!-- Active range -->
+                                    <div 
+                                        class="absolute inset-y-0 bg-gradient-to-r from-primary/60 via-primary to-primary/60 rounded-full"
+                                        :style="{ 
+                                            left: `${getPosition(report.lower_percentile)}%`, 
+                                            right: `${100 - getPosition(report.upper_percentile)}%`
+                                        }"
+                                    ></div>
+                                    
+                                    <!-- Lower percentile marker -->
+                                    <div 
+                                        class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                                        :style="{ left: `${getPosition(report.lower_percentile)}%` }"
+                                    >
+                                        <div class="w-4 h-4 rounded-full bg-background border-[3px] border-primary/70 shadow-sm"></div>
+                                    </div>
+                                    
+                                    <!-- Median marker (prominent) -->
+                                    <div 
+                                        class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
+                                        :style="{ left: `${getPosition(report.median)}%` }"
+                                    >
+                                        <div class="w-5 h-5 rounded-full bg-primary shadow-lg shadow-primary/40"></div>
+                                    </div>
+                                    
+                                    <!-- Upper percentile marker -->
+                                    <div 
+                                        class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
+                                        :style="{ left: `${getPosition(report.upper_percentile)}%` }"
+                                    >
+                                        <div class="w-4 h-4 rounded-full bg-background border-[3px] border-primary/70 shadow-sm"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Values displayed as cards below -->
+                            <div class="grid grid-cols-3 gap-1.5 sm:gap-3">
+                                <div class="text-center p-2 sm:p-3 rounded-lg bg-muted/50">
+                                    <div class="text-[9px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Nedre (25%)</div>
+                                    <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrencyRounded(report.lower_percentile) }}</div>
+                                </div>
+                                <div class="text-center p-2 sm:p-3 rounded-lg bg-primary/10 border border-primary/20">
+                                    <div class="text-[9px] sm:text-xs text-primary font-medium mb-0.5 sm:mb-1">Median (50%)</div>
+                                    <div class="text-sm sm:text-lg font-bold text-primary truncate">{{ formatCurrencyRounded(report.median) }}</div>
+                                </div>
+                                <div class="text-center p-2 sm:p-3 rounded-lg bg-muted/50">
+                                    <div class="text-[9px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Øvre (75%)</div>
+                                    <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrencyRounded(report.upper_percentile) }}</div>
+                                </div>
+                            </div>
+
+                            <p class="text-center text-[10px] sm:text-xs text-muted-foreground">
+                                50% af lønningerne ligger mellem nedre og øvre kvartil.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Active Job Postings Card -->
+                <Card v-if="report.active_job_postings_the_hub > 0" class="flex flex-col">
+                    <CardHeader>
+                        <CardTitle class="flex items-center gap-2">
+                            Aktive Jobopslag
+                        </CardTitle>
+                        <CardDescription>
+                            Jobopslag der matcher din jobtitel
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent class="flex-1 flex flex-col justify-center">
+                        <div class="text-center space-y-3">
+                            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 border border-primary/20">
+                                <span class="text-3xl font-bold text-primary">{{ report.active_job_postings_the_hub }}</span>
+                            </div>
+                            <p class="text-sm text-muted-foreground">
+                                {{ report.active_job_postings_the_hub === 1 ? 'aktivt jobopslag' : 'aktive jobopslag' }}
+                            </p>
+                            <p class="text-xs text-muted-foreground">
+                                baseret på din jobtitel fra The Hub
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
             <!-- Full Width Cards Section -->
             <div class="space-y-4 sm:space-y-6">
-
-                    <!-- Visualization Card -->
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Løninterval</CardTitle>
-                            <CardDescription>
-                                Visualisering af lønniveauet baseret på sammenlignelige profiler.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="space-y-4 sm:space-y-6">
-                                <!-- Salary Range Bar - Clean Minimal Design -->
-                                <div class="relative py-3">
-                                    <!-- Main track -->
-                                    <div class="relative h-2.5 bg-muted/60 rounded-full">
-                                        <!-- Active range -->
-                                        <div 
-                                            class="absolute inset-y-0 bg-gradient-to-r from-primary/60 via-primary to-primary/60 rounded-full"
-                                            :style="{ 
-                                                left: `${getPosition(report.lower_percentile)}%`, 
-                                                right: `${100 - getPosition(report.upper_percentile)}%`
-                                            }"
-                                        ></div>
-                                        
-                                        <!-- Lower percentile marker -->
-                                        <div 
-                                            class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
-                                            :style="{ left: `${getPosition(report.lower_percentile)}%` }"
-                                        >
-                                            <div class="w-4 h-4 rounded-full bg-background border-[3px] border-primary/70 shadow-sm"></div>
-                                        </div>
-                                        
-                                        <!-- Median marker (prominent) -->
-                                        <div 
-                                            class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10"
-                                            :style="{ left: `${getPosition(report.median)}%` }"
-                                        >
-                                            <div class="w-5 h-5 rounded-full bg-primary shadow-lg shadow-primary/40"></div>
-                                        </div>
-                                        
-                                        <!-- Upper percentile marker -->
-                                        <div 
-                                            class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2"
-                                            :style="{ left: `${getPosition(report.upper_percentile)}%` }"
-                                        >
-                                            <div class="w-4 h-4 rounded-full bg-background border-[3px] border-primary/70 shadow-sm"></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Values displayed as cards below -->
-                                <div class="grid grid-cols-3 gap-1.5 sm:gap-3">
-                                    <div class="text-center p-2 sm:p-3 rounded-lg bg-muted/50">
-                                        <div class="text-[9px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Nedre (25%)</div>
-                                        <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrencyRounded(report.lower_percentile) }}</div>
-                                    </div>
-                                    <div class="text-center p-2 sm:p-3 rounded-lg bg-primary/10 border border-primary/20">
-                                        <div class="text-[9px] sm:text-xs text-primary font-medium mb-0.5 sm:mb-1">Median (50%)</div>
-                                        <div class="text-sm sm:text-lg font-bold text-primary truncate">{{ formatCurrencyRounded(report.median) }}</div>
-                                    </div>
-                                    <div class="text-center p-2 sm:p-3 rounded-lg bg-muted/50">
-                                        <div class="text-[9px] sm:text-xs text-muted-foreground mb-0.5 sm:mb-1">Øvre (75%)</div>
-                                        <div class="text-xs sm:text-base font-bold truncate">{{ formatCurrencyRounded(report.upper_percentile) }}</div>
-                                    </div>
-                                </div>
-
-                                <p class="text-center text-[10px] sm:text-xs text-muted-foreground">
-                                    50% af lønningerne ligger mellem nedre og øvre kvartil.
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
 
                     <!-- Prosa Stats Card -->
                     <Card v-if="relevantProsaStats.length > 0">

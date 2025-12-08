@@ -36,6 +36,7 @@ class Report extends Model
         'filters',
         'payslip_match',
         'match_metadata',
+        'active_job_postings_the_hub',
     ];
 
     /**

@@ -66,8 +66,11 @@ const handleSubmit = () => {
     });
 
     finalForm.post('/reports', {
-        onSuccess: () => {
-            // Inertia automatisk redirect
+        onError: (errors: Record<string, string>) => {
+            console.error('Fejl ved rapport oprettelse:', errors);
+            if (errors.error) {
+                alert(errors.error);
+            }
         },
     });
 };

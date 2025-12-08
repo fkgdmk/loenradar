@@ -109,4 +109,18 @@ class Report extends Model
         return $this->belongsToMany(JobPosting::class, 'report_job_posting', 'report_id', 'job_posting_id')
             ->withPivot('match_score');
     }
+
+    /**
+     * Get the responsibility level for this report from filters
+     */
+    public function responsibilityLevel(): ?ResponsibilityLevel
+    {
+        $responsibilityLevelId = $this->filters['responsibility_level_id'] ?? null;
+        
+        if (!$responsibilityLevelId) {
+            return null;
+        }
+
+        return ResponsibilityLevel::find($responsibilityLevelId);
+    }
 }

@@ -892,6 +892,7 @@ class ReportsController extends Controller
 
         return Inertia::render('Reports/Show', [
             'report' => $report,
+            'responsibilityLevel' => $report->responsibilityLevel(),
         ]);
     }
 

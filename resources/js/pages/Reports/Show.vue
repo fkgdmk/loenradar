@@ -102,12 +102,20 @@ interface Report {
     job_postings?: JobPosting[];
     filters?: {
         skill_ids?: number[];
+        responsibility_level_id?: number;
+        team_size?: number;
     };
     active_job_postings_the_hub: number;
 }
 
+interface ResponsibilityLevel {
+    id: number;
+    name: string;
+}
+
 const props = defineProps<{
     report: Report;
+    responsibilityLevel: ResponsibilityLevel | null;
 }>();
 
 // Flash message handling
@@ -375,6 +383,16 @@ const formattedConclusion = computed(() => {
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-muted-foreground">Region</span>
                                 <span class="font-medium">{{ report.region.name }}</span>
+                            </div>
+
+                            <div v-if="responsibilityLevel" class="flex justify-between items-center">
+                                <span class="text-sm text-muted-foreground">Rolle</span>
+                                <span class="font-medium text-right">{{ responsibilityLevel.name }}</span>
+                            </div>
+
+                            <div v-if="report.filters?.team_size && report.filters.team_size > 0" class="flex justify-between items-center">
+                                <span class="text-sm text-muted-foreground">Lederansvar</span>
+                                <span class="font-medium">{{ report.filters.team_size }} medarbejder{{ report.filters.team_size === 1 ? '' : 'e' }}</span>
                             </div>
                         </div>
                     </CardContent>

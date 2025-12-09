@@ -203,7 +203,16 @@ class ReportsController extends Controller
     {
         $filters = $report->filters ?? [];
         $skillIds = $filters['skill_ids'] ?? [];
-        $responsibilityLevelId = $report->uploadedPayslip?->responsibility_level_id;
+        
+        // Check both filters and uploadedPayslip for responsibility_level_id
+        // (filters is used before payslip is uploaded, uploadedPayslip after)
+        $responsibilityLevelId = $filters['responsibility_level_id'] 
+            ?? $report->uploadedPayslip?->responsibility_level_id 
+            ?? null;
+        
+        $teamSize = $filters['team_size'] 
+            ?? $report->uploadedPayslip?->team_size 
+            ?? null;
         
         // Bestem step baseret på data
         $step = 1;
@@ -239,7 +248,7 @@ class ReportsController extends Controller
             'gender' => $filters['gender'] ?? null,
             'region_id' => $report->region_id,
             'responsibility_level_id' => $responsibilityLevelId,
-            'team_size' => $report->uploadedPayslip?->team_size,
+            'team_size' => $teamSize,
             'skill_ids' => $skillIds,
             'step' => $step,
             'document' => $document,
@@ -247,22 +256,17 @@ class ReportsController extends Controller
     }
 
     /**
-     * Store payslip after step 1.
+     * Store job details (step 1) - creates a new draft report.
      */
-    public function storePayslip(Request $request)
+    public function storeJobDetails(Request $request)
     {
         $validated = $request->validate([
-            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'job_title_id' => 'required|exists:job_titles,id',
             'area_of_responsibility_id' => 'nullable|exists:area_of_responsibilities,id',
             'experience' => 'required|integer|min:0|max:50',
             'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
             'region_id' => 'required|exists:regions,id',
         ], [
-            'document.required' => 'Upload venligst din lønseddel',
-            'document.file' => 'Dokumentet skal være en fil',
-            'document.mimes' => 'Dokumentet skal være en PDF eller et billede (JPG, PNG, WEBP)',
-            'document.max' => 'Dokumentet må maksimalt være 10MB',
             'job_title_id.required' => 'Vælg venligst en jobtitel',
             'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
             'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
@@ -284,13 +288,61 @@ class ReportsController extends Controller
 
         DB::beginTransaction();
         try {
-            // Opret payslip (uden responsibility_level_id og team_size endnu)
-            $payslip = Payslip::create([
+            // Opret draft report (uden payslip endnu)
+            $report = Report::create([
+                'user_id' => $request->user()->id,
                 'job_title_id' => $validated['job_title_id'],
                 'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
                 'experience' => $validated['experience'],
-                'gender' => $gender,
                 'region_id' => $validated['region_id'],
+                'status' => 'draft',
+                'filters' => [
+                    'gender' => $gender,
+                ],
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('reports.create', ['report_id' => $report->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af rapporten.']);
+        }
+    }
+
+    /**
+     * Store payslip for a report (step 3).
+     */
+    public function storePayslip(Request $request, Report $report)
+    {
+        // Verify ownership
+        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
+            return back()->withErrors(['error' => 'Adgang nægtet.']);
+        }
+
+        $validated = $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+        ], [
+            'document.required' => 'Upload venligst din lønseddel',
+            'document.file' => 'Dokumentet skal være en fil',
+            'document.mimes' => 'Dokumentet skal være en PDF eller et billede (JPG, PNG, WEBP)',
+            'document.max' => 'Dokumentet må maksimalt være 10MB',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Get gender from filters
+            $gender = $report->filters['gender'] ?? null;
+
+            // Opret payslip
+            $payslip = Payslip::create([
+                'job_title_id' => $report->job_title_id,
+                'area_of_responsibility_id' => $report->area_of_responsibility_id,
+                'experience' => $report->experience,
+                'gender' => $gender,
+                'region_id' => $report->region_id,
+                'responsibility_level_id' => $report->filters['responsibility_level_id'] ?? null,
+                'team_size' => $report->filters['team_size'] ?? null,
                 'uploader_id' => $request->user()->id,
                 'uploaded_at' => now(),
                 'source' => 'user_upload',
@@ -300,18 +352,9 @@ class ReportsController extends Controller
             $payslip->addMediaFromRequest('document')
                 ->toMediaCollection('documents');
 
-            // Opret draft report
-            $report = Report::create([
-                'user_id' => $request->user()->id,
+            // Opdater report med payslip
+            $report->update([
                 'uploaded_payslip_id' => $payslip->id,
-                'job_title_id' => $validated['job_title_id'],
-                'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
-                'experience' => $validated['experience'],
-                'region_id' => $validated['region_id'],
-                'status' => 'draft',
-                'filters' => [
-                    'gender' => $gender,
-                ],
             ]);
 
             // Knyt payslip til report
@@ -333,10 +376,10 @@ class ReportsController extends Controller
                 ]);
             }
 
-            return redirect()->route('reports.create', ['report_id' => $report->id]);
+            return back();
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af lønsedlen.']);
+            return back()->withErrors(['error' => 'Der opstod en fejl ved upload af lønsedlen.']);
         }
     }
 
@@ -381,22 +424,17 @@ class ReportsController extends Controller
     }
 
     /**
-     * Store payslip data for guests (save to database as draft).
+     * Store job details for guests (step 1) - creates a new draft report.
      */
-    public function storeGuestPayslip(Request $request)
+    public function storeGuestJobDetails(Request $request)
     {
         $validated = $request->validate([
-            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'job_title_id' => 'required|exists:job_titles,id',
             'area_of_responsibility_id' => 'nullable|exists:area_of_responsibilities,id',
             'experience' => 'required|integer|min:0|max:50',
             'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
             'region_id' => 'required|exists:regions,id',
         ], [
-            'document.required' => 'Upload venligst din lønseddel',
-            'document.file' => 'Dokumentet skal være en fil',
-            'document.mimes' => 'Dokumentet skal være en PDF eller et billede (JPG, PNG, WEBP)',
-            'document.max' => 'Dokumentet må maksimalt være 10MB',
             'job_title_id.required' => 'Vælg venligst en jobtitel',
             'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
             'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
@@ -421,27 +459,10 @@ class ReportsController extends Controller
             // Generate unique guest token
             $guestToken = Str::uuid()->toString();
 
-            // Create payslip without uploader_id (guest)
-            $payslip = Payslip::create([
-                'job_title_id' => $validated['job_title_id'],
-                'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
-                'experience' => $validated['experience'],
-                'gender' => $gender,
-                'region_id' => $validated['region_id'],
-                'uploader_id' => $request->user()?->id, // null for guests
-                'uploaded_at' => now(),
-                'source' => 'guest_upload',
-            ]);
-
-            // Upload document to payslip
-            $payslip->addMediaFromRequest('document')
-                ->toMediaCollection('documents');
-
-            // Create draft report
+            // Create draft report (uden payslip endnu)
             $report = Report::create([
                 'user_id' => $request->user()?->id, // null for guests
                 'guest_token' => $guestToken,
-                'uploaded_payslip_id' => $payslip->id,
                 'job_title_id' => $validated['job_title_id'],
                 'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
                 'experience' => $validated['experience'],
@@ -452,11 +473,79 @@ class ReportsController extends Controller
                 ],
             ]);
 
-            // Attach payslip to report
-            $report->payslips()->attach($payslip->id);
-
             // Store guest token in session for verification
             $request->session()->put('guest_report_token', $guestToken);
+
+            DB::commit();
+
+            return redirect()->route('get-started', ['report_id' => $report->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af rapporten.']);
+        }
+    }
+
+    /**
+     * Store payslip for guests (step 3).
+     */
+    public function storeGuestPayslip(Request $request, Report $report)
+    {
+        $guestToken = $request->session()->get('guest_report_token');
+        
+        // Verify access to the report
+        if ($report->status !== 'draft') {
+            return back()->withErrors(['error' => 'Rapport kan ikke opdateres.']);
+        }
+        
+        if ($request->user()) {
+            if ($report->user_id !== $request->user()->id && $report->guest_token !== $guestToken) {
+                return back()->withErrors(['error' => 'Adgang nægtet.']);
+            }
+        } else {
+            if ($report->guest_token !== $guestToken) {
+                return back()->withErrors(['error' => 'Adgang nægtet.']);
+            }
+        }
+
+        $validated = $request->validate([
+            'document' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+        ], [
+            'document.required' => 'Upload venligst din lønseddel',
+            'document.file' => 'Dokumentet skal være en fil',
+            'document.mimes' => 'Dokumentet skal være en PDF eller et billede (JPG, PNG, WEBP)',
+            'document.max' => 'Dokumentet må maksimalt være 10MB',
+        ]);
+
+        // Get gender from filters
+        $gender = $report->filters['gender'] ?? null;
+
+        DB::beginTransaction();
+        try {
+            // Create payslip
+            $payslip = Payslip::create([
+                'job_title_id' => $report->job_title_id,
+                'area_of_responsibility_id' => $report->area_of_responsibility_id,
+                'experience' => $report->experience,
+                'gender' => $gender,
+                'region_id' => $report->region_id,
+                'responsibility_level_id' => $report->filters['responsibility_level_id'] ?? null,
+                'team_size' => $report->filters['team_size'] ?? null,
+                'uploader_id' => $request->user()?->id, // null for guests
+                'uploaded_at' => now(),
+                'source' => 'guest_upload',
+            ]);
+
+            // Upload document to payslip
+            $payslip->addMediaFromRequest('document')
+                ->toMediaCollection('documents');
+
+            // Update report with payslip
+            $report->update([
+                'uploaded_payslip_id' => $payslip->id,
+            ]);
+
+            // Attach payslip to report
+            $report->payslips()->attach($payslip->id);
 
             DB::commit();
 
@@ -474,17 +563,17 @@ class ReportsController extends Controller
                 ]);
             }
 
-            return redirect()->route('get-started', ['report_id' => $report->id]);
+            return back();
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af lønsedlen.']);
+            return back()->withErrors(['error' => 'Der opstod en fejl ved upload af lønsedlen.']);
         }
     }
 
     /**
-     * Update step 1 data for guests (when report already exists).
+     * Update job details for guests (step 1) when report already exists.
      */
-    public function updateGuestStep1(Request $request, Report $report)
+    public function updateGuestJobDetails(Request $request, Report $report)
     {
         $guestToken = $request->session()->get('guest_report_token');
         
@@ -531,7 +620,7 @@ class ReportsController extends Controller
 
         DB::beginTransaction();
         try {
-            // Opdater payslip
+            // Opdater payslip hvis det findes
             $payslip = $report->uploadedPayslip;
             if ($payslip) {
                 $payslip->update([
@@ -556,20 +645,6 @@ class ReportsController extends Controller
 
             DB::commit();
 
-            // Tjek om der er nok payslips
-            $findMatchingPayslips = new FindMatchingPayslips();
-            $result = $findMatchingPayslips->find($report);
-            $matchingPayslips = $result['payslips'];
-            $description = $result['description'];
-
-            // Hvis der ikke er nok payslips (under 5), returner fejl med report_id
-            if ($matchingPayslips->count() < 5 && $description) {
-                return back()->withErrors([
-                    'payslip_warning' => $description,
-                    'report_id' => $report->id,
-                ]);
-            }
-
             return redirect()->route('get-started', ['report_id' => $report->id]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -578,9 +653,9 @@ class ReportsController extends Controller
     }
 
     /**
-     * Update step 2 data for guests (save to database).
+     * Update competencies for guests (step 2) - responsibility level, team size, skills.
      */
-    public function updateGuestStep2(Request $request)
+    public function updateGuestCompetencies(Request $request)
     {
         $validated = $request->validate([
             'report_id' => 'required|exists:reports,id',
@@ -613,7 +688,7 @@ class ReportsController extends Controller
 
         DB::beginTransaction();
         try {
-            // Update payslip with step 2 data
+            // Update payslip with competencies data hvis det findes
             $payslip = $report->uploadedPayslip;
             if ($payslip) {
                 $payslip->update([
@@ -622,7 +697,7 @@ class ReportsController extends Controller
                 ]);
             }
 
-            // Update report filters with step 2 data
+            // Update report filters with competencies data
             $report->update([
                 'filters' => array_merge($report->filters ?? [], [
                     'responsibility_level_id' => $validated['responsibility_level_id'],
@@ -746,10 +821,15 @@ class ReportsController extends Controller
     }
 
     /**
-     * Update step 1 data (job title, area, experience, gender, region).
+     * Update job details (step 1) for an existing report.
      */
-    public function updateStep1(Request $request, Report $report)
+    public function updateJobDetails(Request $request, Report $report)
     {
+        // Verify ownership
+        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
+            return back()->withErrors(['error' => 'Adgang nægtet.']);
+        }
+
         $validated = $request->validate([
             'job_title_id' => 'required|exists:job_titles,id',
             'area_of_responsibility_id' => 'nullable|exists:area_of_responsibilities,id',
@@ -778,7 +858,7 @@ class ReportsController extends Controller
 
         DB::beginTransaction();
         try {
-            // Opdater payslip
+            // Opdater payslip hvis det findes
             $payslip = $report->uploadedPayslip;
             if ($payslip) {
                 $payslip->update([
@@ -803,20 +883,6 @@ class ReportsController extends Controller
 
             DB::commit();
 
-            // Tjek om der er nok payslips
-            $findMatchingPayslips = new FindMatchingPayslips();
-            $result = $findMatchingPayslips->find($report);
-            $matchingPayslips = $result['payslips'];
-            $description = $result['description'];
-
-            // Hvis der ikke er nok payslips (under 5), returner fejl med report_id
-            if ($matchingPayslips->count() < 5 && $description) {
-                return back()->withErrors([
-                    'payslip_warning' => $description,
-                    'report_id' => $report->id,
-                ]);
-            }
-
             return redirect()->route('reports.create', ['report_id' => $report->id]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -825,10 +891,14 @@ class ReportsController extends Controller
     }
 
     /**
-     * Update step 2 data (responsibility level, team size, skills).
+     * Update competencies (step 2) - responsibility level, team size, skills.
      */
-    public function updateStep2(Request $request, Report $report)
+    public function updateCompetencies(Request $request, Report $report)
     {
+        // Verify ownership
+        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
+            return back()->withErrors(['error' => 'Adgang nægtet.']);
+        }
 
         $validated = $request->validate([
             'responsibility_level_id' => 'required|exists:responsibility_levels,id',
@@ -839,8 +909,7 @@ class ReportsController extends Controller
 
         DB::beginTransaction();
         try {
-
-            // Opdater payslip med step 2 data
+            // Opdater payslip med competencies data hvis det findes
             $payslip = $report->uploadedPayslip;
             if ($payslip) {
                 $payslip->update([
@@ -849,12 +918,12 @@ class ReportsController extends Controller
                 ]);
             }
 
-            // Opdater report med step 2 data (men ikke markér som completed)
+            // Opdater report med competencies data
             $report->update([
                 'filters' => array_merge($report->filters ?? [], [
                     'responsibility_level_id' => $validated['responsibility_level_id'],
                     'team_size' => $validated['team_size'] ?? null,
-                    'skill_ids' => $validated['skill_ids'],
+                    'skill_ids' => $validated['skill_ids'] ?? [],
                 ]),
             ]);
 

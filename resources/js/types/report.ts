@@ -76,18 +76,22 @@ export interface ReportFormData {
 }
 
 export interface Step1Errors {
-    document: string;
     job_title_id: string;
     area_of_responsibility_id: string;
     experience: string;
     region_id: string;
 }
 
+export interface Step3Errors {
+    document: string;
+}
+
 export type ReportMode = 'guest' | 'authenticated';
 
 export interface ReportFormEndpoints {
-    step1: string;
-    step2: string;
+    jobDetails: string;
+    competencies: string;
+    payslip: string;
     submit: string;
 }
 

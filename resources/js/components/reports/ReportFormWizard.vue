@@ -13,9 +13,7 @@ import InputError from '@/components/InputError.vue';
 import PayslipAnonymizer from '@/components/PayslipAnonymizer.vue';
 import { login } from '@/routes';
 import { 
-    Upload, 
     FileText, 
-    Briefcase, 
     MapPin, 
     ChevronRight, 
     ChevronLeft,
@@ -26,10 +24,6 @@ import {
     LogIn,
     Mail,
     Image,
-    PencilRuler,
-    Edit,
-    Edit2Icon,
-    PenBoxIcon
 } from 'lucide-vue-next';
 import type { useReportForm } from '@/composables/useReportForm';
 
@@ -143,7 +137,7 @@ const handleSubmit = () => {
                     <span v-else>1</span>
                 </div>
                 <span class="hidden sm:inline text-sm font-medium" :class="rf.currentStep.value >= 1 ? 'text-foreground' : 'text-muted-foreground'">
-                    Upload Lønseddel
+                    Jobdetaljer
                 </span>
             </button>
             <ChevronRight class="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
@@ -188,7 +182,7 @@ const handleSubmit = () => {
                     3
                 </div>
                 <span class="hidden sm:inline text-sm font-medium" :class="rf.currentStep.value >= 3 ? 'text-foreground' : 'text-muted-foreground'">
-                    Gennemgå & Generer
+                    Upload & Generer
                 </span>
             </button>
         </div>
@@ -196,16 +190,19 @@ const handleSubmit = () => {
         <Card>
             <CardHeader>
                 <CardTitle>
-                    <span v-if="rf.currentStep.value === 1">Trin 1: Upload lønseddel</span>
-                    <span v-else-if="rf.currentStep.value === 2">Trin 2: Ansvar og færdigheder</span>
-                    <span v-else>Trin 3: Opsummering</span>
+                    <span v-if="rf.currentStep.value === 1">Trin 1: Jobdetaljer</span>
+                    <span v-else-if="rf.currentStep.value === 2">Trin 2: Kompetencer</span>
+                    <span v-else>Trin 3: Upload og generer</span>
                 </CardTitle>
                 <CardDescription>
                     <span v-if="rf.currentStep.value === 1">
-                        Upload din lønseddel og anonymiser den ved at strege sensitive data over.
+                        Fortæl os om din stilling, erfaring og arbejdsområde
                     </span>
                     <span v-else-if="rf.currentStep.value === 2">
                         Beskriv dit ansvarsniveau og vælg dine færdigheder
+                    </span>
+                    <span v-else-if="!rf.isDocumentUploaded.value">
+                        Upload din lønseddel og anonymiser den ved at strege sensitive data over
                     </span>
                     <span v-else>
                         Gennemgå dine valg og {{ showAuthPrompt ? 'opret en konto for at se din rapport' : 'generer din rapport' }}
@@ -213,9 +210,142 @@ const handleSubmit = () => {
                 </CardDescription>
             </CardHeader>
             <CardContent class="space-y-6">
-                <!-- Step 1: Upload og detaljer -->
+                <!-- Step 1: Jobdetaljer -->
                 <div v-if="rf.currentStep.value === 1" class="space-y-6">
-                    <!-- File Upload -->
+                    <!-- Job Title -->
+                    <div>
+                        <Label class="mb-2">Jobtitel</Label>
+                        <Combobox
+                            v-model="rf.form.job_title_id"
+                            :options="rf.jobTitleOptions.value"
+                            placeholder="Vælg jobtitel"
+                            search-placeholder="Søg efter jobtitel..."
+                            empty-text="Ingen jobtitler fundet"
+                        />
+                        <InputError :message="rf.step1Errors.job_title_id" />
+                    </div>
+
+                    <!-- Area of Responsibility (conditional) -->
+                    <div v-if="rf.showAreaOfResponsibility.value">
+                        <Label class="mb-2">Område</Label>
+                        <Combobox
+                            v-model="rf.form.area_of_responsibility_id"
+                            :options="rf.areaOfResponsibilityOptions.value"
+                            placeholder="Vælg område"
+                            search-placeholder="Søg efter område..."
+                            empty-text="Ingen områder fundet"
+                        />
+                        <InputError :message="rf.step1Errors.area_of_responsibility_id" />
+                    </div>
+
+                    <!-- Experience -->
+                    <div>
+                        <Label class="mb-2">Erfaring i år</Label>
+                        <Input
+                            v-model.number="rf.experienceInput.value"
+                            type="number"
+                            min="0"
+                            max="50"
+                            placeholder="fx. 5"
+                        />
+                        <InputError :message="rf.step1Errors.experience" />
+                    </div>
+
+                    <!-- Region -->
+                    <div>
+                        <Label class="mb-2 flex items-center gap-2">
+                            <MapPin class="h-4 w-4" />
+                            Region
+                        </Label>
+                        <Combobox
+                            v-model="rf.form.region_id"
+                            :options="rf.regionOptions.value"
+                            placeholder="Vælg region"
+                            search-placeholder="Søg efter region..."
+                            empty-text="Ingen regioner fundet"
+                        />
+                        <InputError :message="rf.step1Errors.region_id" />
+                    </div>
+                </div>
+
+                <!-- Step 2: Ansvar og færdigheder -->
+                <div v-if="rf.currentStep.value === 2" class="space-y-6">
+                    <!-- Responsibility Level -->
+                    <div>
+                        <Label class="mb-2">
+                            Hvilket ansvarsniveau beskriver bedst din rolle?
+                        </Label>
+                        <Combobox
+                            v-model="rf.form.responsibility_level_id"
+                            :options="rf.responsibilityLevelOptions.value"
+                            placeholder="Vælg ansvarsniveau"
+                            search-placeholder="Søg efter ansvarsniveau..."
+                            empty-text="Ingen ansvarsniveauer fundet"
+                        />
+                    </div>
+
+                    <!-- Team Size (kun for ledere) -->
+                    <div v-if="rf.showTeamSize.value">
+                        <Label class="mb-2">
+                            Hvor mange personer er du faglig eller personalemæssig leder for?
+                        </Label>
+                        <Input
+                            v-model.number="rf.teamSizeInput.value"
+                            type="number"
+                            min="0"
+                            max="1000"
+                            placeholder="fx. 5"
+                        />
+                    </div>
+
+                    <!-- Skills -->
+                    <div>
+                        <Label class="mb-2">
+                            Oplist de vigtigste teknologier, systemer eller metoder, du bruger i dit job. (valgfrit)
+                        </Label>
+                        <p class="mb-4 text-sm text-muted-foreground">
+                            Vælg op til 5 færdigheder
+                        </p>
+                        <Input
+                            v-model="rf.skillSearch.value"
+                            type="text"
+                            placeholder="Søg efter færdigheder..."
+                            class="mb-4"
+                            :disabled="!rf.form.job_title_id"
+                        />
+                        <div
+                            v-if="!rf.form.job_title_id"
+                            class="rounded-md border border-dashed p-4 text-sm text-muted-foreground"
+                        >
+                            Vælg først en jobtitel for at se relevante færdigheder.
+                        </div>
+                        <div
+                            v-else-if="rf.filteredSkills.value.length === 0"
+                            class="rounded-md border border-dashed p-4 text-sm text-muted-foreground"
+                        >
+                            Ingen færdigheder fundet for den valgte jobtitel.
+                        </div>
+                        <div v-else class="flex flex-wrap gap-2">
+                            <Badge
+                                v-for="skill in rf.filteredSkills.value"
+                                :key="skill.id"
+                                :variant="rf.selectedSkills.value.includes(skill.id) ? 'default' : 'outline'"
+                                class="cursor-pointer"
+                                @click="rf.toggleSkill(skill.id)"
+                            >
+                                {{ skill.name }}
+                                <Check v-if="rf.selectedSkills.value.includes(skill.id)" class="ml-1 h-3 w-3" />
+                            </Badge>
+                        </div>
+                        <p v-if="rf.selectedSkills.value.length > 0" class="mt-2 text-sm text-muted-foreground">
+                            Valgt: {{ rf.selectedSkills.value.length }} / 5
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Step 3: Upload og Generer -->
+                <div v-if="rf.currentStep.value === 3" class="space-y-6">
+                    <!-- File Upload Section -->
                     <div>
                         <div v-if="rf.uploadedFile.value" class="mt-2">
                             <div v-if="!rf.showAnonymizer.value" class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg border p-4">
@@ -332,7 +462,7 @@ const handleSubmit = () => {
                                 <p class="mt-3 text-xs text-muted-foreground text-center">
                                     Du kan anonymisere direkte i browseren efter upload.
                                 </p>
-                                <InputError :message="rf.step1Errors.document" />
+                                <InputError :message="rf.step3Errors.document" />
                             </div>
                             
                             <div v-if="rf.showAnonymizer.value && rf.fileToAnonymize.value" class="mt-4">
@@ -345,192 +475,58 @@ const handleSubmit = () => {
                         </div>
                     </div>
 
-                    <Separator v-if="rf.isDocumentUploaded.value" />
-
-                    <!-- Job Title -->
-                    <div v-if="rf.isDocumentUploaded.value">
-                        <CardTitle class="mb-6 flex items-center gap-2">
-                            <PenBoxIcon class="h-5 w-4" />
-                            Udfyld detaljer om din stilling
-                        </CardTitle>
-
-                        <Combobox
-                            v-model="rf.form.job_title_id"
-                            :options="rf.jobTitleOptions.value"
-                            placeholder="Vælg jobtitel"
-                            search-placeholder="Søg efter jobtitel..."
-                            empty-text="Ingen jobtitler fundet"
-                        />
-                        <InputError :message="rf.step1Errors.job_title_id" />
-                    </div>
-
-                    <!-- Area of Responsibility (conditional) -->
-                    <div v-if="rf.isDocumentUploaded.value && rf.showAreaOfResponsibility.value">
-                        <Label class="mb-2">Område</Label>
-                        <Combobox
-                            v-model="rf.form.area_of_responsibility_id"
-                            :options="rf.areaOfResponsibilityOptions.value"
-                            placeholder="Vælg område"
-                            search-placeholder="Søg efter område..."
-                            empty-text="Ingen områder fundet"
-                        />
-                        <InputError :message="rf.step1Errors.area_of_responsibility_id" />
-                    </div>
-
-                    <!-- Experience -->
-                    <div v-if="rf.isDocumentUploaded.value">
-                        <Label class="mb-2">Erfaring i år</Label>
-                        <Input
-                            v-model.number="rf.experienceInput.value"
-                            type="number"
-                            min="0"
-                            max="50"
-                            placeholder="fx. 5"
-                        />
-                        <InputError :message="rf.step1Errors.experience" />
-                    </div>
-
-                    <!-- Region -->
-                    <div v-if="rf.isDocumentUploaded.value">
-                        <Label class="mb-2 flex items-center gap-2">
-                            <MapPin class="h-4 w-4" />
-                            Region
-                        </Label>
-                        <Combobox
-                            v-model="rf.form.region_id"
-                            :options="rf.regionOptions.value"
-                            placeholder="Vælg region"
-                            search-placeholder="Søg efter region..."
-                            empty-text="Ingen regioner fundet"
-                        />
-                        <InputError :message="rf.step1Errors.region_id" />
-                    </div>
-                </div>
-
-                <!-- Step 2: Ansvar og færdigheder -->
-                <div v-if="rf.currentStep.value === 2" class="space-y-6">
-                    <!-- Responsibility Level -->
-                    <div>
-                        <Label class="mb-2">
-                            Hvilket ansvarsniveau beskriver bedst din rolle?
-                        </Label>
-                        <Combobox
-                            v-model="rf.form.responsibility_level_id"
-                            :options="rf.responsibilityLevelOptions.value"
-                            placeholder="Vælg ansvarsniveau"
-                            search-placeholder="Søg efter ansvarsniveau..."
-                            empty-text="Ingen ansvarsniveauer fundet"
-                        />
-                    </div>
-
-                    <!-- Team Size (kun for ledere) -->
-                    <div v-if="rf.showTeamSize.value">
-                        <Label class="mb-2">
-                            Hvor mange personer er du faglig eller personalemæssig leder for?
-                        </Label>
-                        <Input
-                            v-model.number="rf.teamSizeInput.value"
-                            type="number"
-                            min="0"
-                            max="1000"
-                            placeholder="fx. 5"
-                        />
-                    </div>
-
-                    <!-- Skills -->
-                    <div>
-                        <Label class="mb-2">
-                            Oplist de vigtigste teknologier, systemer eller metoder, du bruger i dit job. (valgfrit)
-                        </Label>
-                        <p class="mb-4 text-sm text-muted-foreground">
-                            Vælg op til 5 færdigheder
-                        </p>
-                        <Input
-                            v-model="rf.skillSearch.value"
-                            type="text"
-                            placeholder="Søg efter færdigheder..."
-                            class="mb-4"
-                            :disabled="!rf.form.job_title_id"
-                        />
-                        <div
-                            v-if="!rf.form.job_title_id"
-                            class="rounded-md border border-dashed p-4 text-sm text-muted-foreground"
-                        >
-                            Vælg først en jobtitel for at se relevante færdigheder.
-                        </div>
-                        <div
-                            v-else-if="rf.filteredSkills.value.length === 0"
-                            class="rounded-md border border-dashed p-4 text-sm text-muted-foreground"
-                        >
-                            Ingen færdigheder fundet for den valgte jobtitel.
-                        </div>
-                        <div v-else class="flex flex-wrap gap-2">
-                            <Badge
-                                v-for="skill in rf.filteredSkills.value"
-                                :key="skill.id"
-                                :variant="rf.selectedSkills.value.includes(skill.id) ? 'default' : 'outline'"
-                                class="cursor-pointer"
-                                @click="rf.toggleSkill(skill.id)"
-                            >
-                                {{ skill.name }}
-                                <Check v-if="rf.selectedSkills.value.includes(skill.id)" class="ml-1 h-3 w-3" />
-                            </Badge>
-                        </div>
-                        <p v-if="rf.selectedSkills.value.length > 0" class="mt-2 text-sm text-muted-foreground">
-                            Valgt: {{ rf.selectedSkills.value.length }} / 5
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Step 3: Opsummering -->
-                <div v-if="rf.currentStep.value === 3" class="space-y-6">
-                    <div class="rounded-lg border bg-muted/50 p-3 sm:p-4">
-                        <p class="mb-4 text-sm font-medium">
-                            Generer lønforhandlings rapport baseret på følgende:
-                        </p>
-                        <div class="space-y-2 sm:space-y-3 text-sm">
-                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
-                                <span class="text-muted-foreground">Jobtitel:</span>
-                                <span class="font-medium sm:text-right">{{ rf.getJobTitleName(rf.form.job_title_id) }}</span>
-                            </div>
-                            <div v-if="rf.form.area_of_responsibility_id" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
-                                <span class="text-muted-foreground">Område:</span>
-                                <span class="font-medium sm:text-right">{{ rf.getAreaOfResponsibilityName(rf.form.area_of_responsibility_id) }}</span>
-                            </div>
-                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
-                                <span class="text-muted-foreground">Erfaring:</span>
-                                <span class="font-medium sm:text-right">{{ rf.form.experience }} år</span>
-                            </div>
-                            <div v-if="rf.form.gender" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
-                                <span class="text-muted-foreground">Køn:</span>
-                                <span class="font-medium sm:text-right">{{ rf.form.gender }}</span>
-                            </div>
-                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
-                                <span class="text-muted-foreground">Region:</span>
-                                <span class="font-medium sm:text-right">{{ rf.getRegionName(rf.form.region_id) }}</span>
-                            </div>
-                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
-                                <span class="text-muted-foreground">Ansvarsniveau:</span>
-                                <span class="font-medium sm:text-right">{{ rf.getResponsibilityLevelName(rf.form.responsibility_level_id) }}</span>
-                            </div>
-                            <div v-if="rf.form.team_size" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
-                                <span class="text-muted-foreground">Team størrelse:</span>
-                                <span class="font-medium sm:text-right">{{ rf.form.team_size }} personer</span>
-                            </div>
-                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
-                                <span class="text-muted-foreground">Færdigheder:</span>
-                                <span class="font-medium sm:text-right">{{ rf.getSkillNames(rf.form.skill_ids) || 'Ingen valgt' }}</span>
+                    <!-- Summary Section (only shown when document is uploaded) -->
+                    <template v-if="rf.isDocumentUploaded.value && !rf.showAnonymizer.value">
+                        <Separator />
+                        
+                        <div class="rounded-lg border bg-muted/50 p-3 sm:p-4">
+                            <p class="mb-4 text-sm font-medium">
+                                Generer lønforhandlings rapport baseret på følgende:
+                            </p>
+                            <div class="space-y-2 sm:space-y-3 text-sm">
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
+                                    <span class="text-muted-foreground">Jobtitel:</span>
+                                    <span class="font-medium sm:text-right">{{ rf.getJobTitleName(rf.form.job_title_id) }}</span>
+                                </div>
+                                <div v-if="rf.form.area_of_responsibility_id" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
+                                    <span class="text-muted-foreground">Område:</span>
+                                    <span class="font-medium sm:text-right">{{ rf.getAreaOfResponsibilityName(rf.form.area_of_responsibility_id) }}</span>
+                                </div>
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
+                                    <span class="text-muted-foreground">Erfaring:</span>
+                                    <span class="font-medium sm:text-right">{{ rf.form.experience }} år</span>
+                                </div>
+                                <div v-if="rf.form.gender" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
+                                    <span class="text-muted-foreground">Køn:</span>
+                                    <span class="font-medium sm:text-right">{{ rf.form.gender }}</span>
+                                </div>
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
+                                    <span class="text-muted-foreground">Region:</span>
+                                    <span class="font-medium sm:text-right">{{ rf.getRegionName(rf.form.region_id) }}</span>
+                                </div>
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
+                                    <span class="text-muted-foreground">Ansvarsniveau:</span>
+                                    <span class="font-medium sm:text-right">{{ rf.getResponsibilityLevelName(rf.form.responsibility_level_id) }}</span>
+                                </div>
+                                <div v-if="rf.form.team_size" class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
+                                    <span class="text-muted-foreground">Team størrelse:</span>
+                                    <span class="font-medium sm:text-right">{{ rf.form.team_size }} personer</span>
+                                </div>
+                                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-0.5 sm:gap-2">
+                                    <span class="text-muted-foreground">Færdigheder:</span>
+                                    <span class="font-medium sm:text-right">{{ rf.getSkillNames(rf.form.skill_ids) || 'Ingen valgt' }}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Auth info for guests -->
-                    <div v-if="showAuthPrompt" class="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                        <p class="text-center font-bold">
-                            <Sparkles class="inline h-4 w-4 mr-1 text-primary" />
-                            Opret en gratis konto eller log ind for at se din personlige rapport
-                        </p>
-                    </div>
+                        <!-- Auth info for guests -->
+                        <div v-if="showAuthPrompt" class="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                            <p class="text-center font-bold">
+                                <Sparkles class="inline h-4 w-4 mr-1 text-primary" />
+                                Opret en gratis konto eller log ind for at se din personlige rapport
+                            </p>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Navigation Buttons -->
@@ -552,7 +548,7 @@ const handleSubmit = () => {
                             v-if="rf.currentStep.value < 3"
                             type="button"
                             class="w-full sm:w-auto"
-                            :disabled="(rf.currentStep.value === 2 && !rf.canProceedToStep3.value) || !rf.isDocumentUploaded.value"
+                            :disabled="(rf.currentStep.value === 1 && !rf.isStep1Valid.value) || (rf.currentStep.value === 2 && !rf.canProceedToStep3.value)"
                             @click="rf.nextStep"
                         >
                             Næste
@@ -562,7 +558,7 @@ const handleSubmit = () => {
                             v-else
                             type="button"
                             class="w-full sm:w-auto"
-                            :disabled="rf.form.processing"
+                            :disabled="rf.form.processing || !rf.isDocumentUploaded.value || rf.showAnonymizer.value"
                             @click="handleSubmit"
                         >
                             <Sparkles class="mr-2 h-4 w-4" />

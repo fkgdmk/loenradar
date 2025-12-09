@@ -417,7 +417,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <h2
                         class="mb-4 text-lg font-semibold text-foreground"
                     >
-                        Jobtitler med ≥3 jobopslag pr statistisk gruppe
+                        Jobopslag med løn pr statistisk gruppe
                     </h2>
                     <div class="h-96 space-y-2 overflow-y-auto">
                         <div
@@ -496,7 +496,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <h2
                         class="mb-4 text-lg font-semibold text-foreground"
                     >
-                        Jobtitler med ≥3 jobopslag pr erfaringsniveau
+                        Jobopslag med løn pr erfaringsniveau
                     </h2>
                     <div class="h-96 space-y-2 overflow-y-auto">
                         <div

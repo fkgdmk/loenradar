@@ -16,9 +16,10 @@ Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index
 
 // Guest-accessible report creation flow (no auth required)
 Route::get('/get-started', [App\Http\Controllers\ReportsController::class, 'getStarted'])->name('get-started');
-Route::post('/reports/guest/payslip', [App\Http\Controllers\ReportsController::class, 'storeGuestPayslip'])->name('reports.storeGuestPayslip');
-Route::patch('/reports/guest/{report}/step1', [App\Http\Controllers\ReportsController::class, 'updateGuestStep1'])->name('reports.updateGuestStep1');
-Route::patch('/reports/guest/step2', [App\Http\Controllers\ReportsController::class, 'updateGuestStep2'])->name('reports.updateGuestStep2');
+Route::post('/reports/guest/job-details', [App\Http\Controllers\ReportsController::class, 'storeGuestJobDetails'])->name('reports.storeGuestJobDetails');
+Route::patch('/reports/guest/{report}/job-details', [App\Http\Controllers\ReportsController::class, 'updateGuestJobDetails'])->name('reports.updateGuestJobDetails');
+Route::patch('/reports/guest/competencies', [App\Http\Controllers\ReportsController::class, 'updateGuestCompetencies'])->name('reports.updateGuestCompetencies');
+Route::post('/reports/guest/{report}/payslip', [App\Http\Controllers\ReportsController::class, 'storeGuestPayslip'])->name('reports.storeGuestPayslip');
 Route::post('/reports/contact-email', [App\Http\Controllers\ReportsController::class, 'storeContactEmail'])->name('reports.storeContactEmail');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -28,10 +29,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Authenticated report routes
     Route::get('/reports', [App\Http\Controllers\ReportsController::class, 'index'])->name('reports.index');
     Route::get('/reports/create', [App\Http\Controllers\ReportsController::class, 'create'])->name('reports.create');
-    Route::post('/reports/payslip', [App\Http\Controllers\ReportsController::class, 'storePayslip'])->name('reports.storePayslip');
+    Route::post('/reports/job-details', [App\Http\Controllers\ReportsController::class, 'storeJobDetails'])->name('reports.storeJobDetails');
     Route::post('/reports', [App\Http\Controllers\ReportsController::class, 'store'])->name('reports.store');
-    Route::patch('/reports/{report}/step1', [App\Http\Controllers\ReportsController::class, 'updateStep1'])->name('reports.updateStep1');
-    Route::patch('/reports/{report}/step2', [App\Http\Controllers\ReportsController::class, 'updateStep2'])->name('reports.updateStep2');
+    Route::patch('/reports/{report}/job-details', [App\Http\Controllers\ReportsController::class, 'updateJobDetails'])->name('reports.updateJobDetails');
+    Route::patch('/reports/{report}/competencies', [App\Http\Controllers\ReportsController::class, 'updateCompetencies'])->name('reports.updateCompetencies');
+    Route::post('/reports/{report}/payslip', [App\Http\Controllers\ReportsController::class, 'storePayslip'])->name('reports.storePayslip');
     Route::get('/reports/{report}', [App\Http\Controllers\ReportsController::class, 'show'])->name('reports.show');
     
     // Payslip review routes

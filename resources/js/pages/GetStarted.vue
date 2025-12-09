@@ -18,14 +18,22 @@ const showAuthModal = ref(false);
 const reportForm = useReportForm({
     props,
     endpoints: {
-        // Use PATCH for existing reports, POST for new
-        step1: (reportId) => {
+        // Step 1: Job details - Use PATCH for existing reports, POST for new
+        jobDetails: (reportId) => {
             if (reportId && reportId !== 'guest') {
-                return `/reports/guest/${reportId}/step1`;
+                return `/reports/guest/${reportId}/job-details`;
+            }
+            return '/reports/guest/job-details';
+        },
+        // Step 2: Competencies
+        competencies: '/reports/guest/competencies',
+        // Step 3: Payslip upload
+        payslip: (reportId) => {
+            if (reportId && reportId !== 'guest') {
+                return `/reports/guest/${reportId}/payslip`;
             }
             return '/reports/guest/payslip';
         },
-        step2: '/reports/guest/step2',
         submit: '/reports/guest/finalize',
     },
 });
@@ -55,7 +63,7 @@ onMounted(() => {
 
 // Dynamic submit button text
 const submitButtonText = computed(() => 
-    isAuthenticated.value ? 'Generer Rapport' : 'Opret konto & generer'
+    isAuthenticated.value ? 'Generer Rapport' : 'Log ind & generer'
 );
 </script>
 

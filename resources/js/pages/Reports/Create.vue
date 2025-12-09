@@ -32,20 +32,27 @@ const hasExistingReport = computed(() =>
 const reportForm = useReportForm({
     props,
     endpoints: {
-        // For step 1: PATCH existing report, or POST new payslip
-        step1: (reportId) => {
+        // For step 1: Job details - PATCH existing report, or POST new report
+        jobDetails: (reportId) => {
             if (reportId && reportId !== 'guest') {
-                return `/reports/${reportId}/step1`;
+                return `/reports/${reportId}/job-details`;
             }
-            return '/reports/payslip';
+            return '/reports/job-details';
         },
-        step1Method: hasExistingReport.value ? 'patch' : 'post',
-        // For step 2: PATCH existing report
-        step2: (reportId) => {
+        jobDetailsMethod: hasExistingReport.value ? 'patch' : 'post',
+        // For step 2: Competencies - PATCH existing report
+        competencies: (reportId) => {
             if (reportId && reportId !== 'guest') {
-                return `/reports/${reportId}/step2`;
+                return `/reports/${reportId}/competencies`;
             }
-            return '/reports/guest/step2';
+            return '/reports/guest/competencies';
+        },
+        // For step 3: Payslip upload
+        payslip: (reportId) => {
+            if (reportId && reportId !== 'guest') {
+                return `/reports/${reportId}/payslip`;
+            }
+            return '/reports/guest/payslip';
         },
         submit: '/reports',
     },

@@ -5,17 +5,23 @@ import type {
     ReportData,
     UploadedDocument,
     Step1Errors,
+    Step3Errors,
     ReportFormEndpoints,
 } from '@/types/report';
 
 export type EndpointResolver = string | ((reportId: number | string | null) => string);
 
 export interface ReportFormEndpointsConfig {
-    step1: EndpointResolver;
-    step2: EndpointResolver;
+    /** Step 1: Job details (jobtitel, erfaring, region) */
+    jobDetails: EndpointResolver;
+    /** Step 2: Competencies (ansvarsniveau, team size, skills) */
+    competencies: EndpointResolver;
+    /** Step 3: Payslip upload */
+    payslip: EndpointResolver;
+    /** Final submit */
     submit: EndpointResolver;
-    /** HTTP method for step1 - 'post' for new reports, 'patch' for updates */
-    step1Method?: 'post' | 'patch';
+    /** HTTP method for jobDetails - 'post' for new reports, 'patch' for updates */
+    jobDetailsMethod?: 'post' | 'patch';
 }
 
 export interface UseReportFormOptions {
@@ -43,13 +49,21 @@ export function useReportForm(options: UseReportFormOptions) {
     const payslipWarning = ref<string | null>(null);
     const showPayslipWarningModal = ref(false);
 
-    // Step calculation
+    // Step calculation - New flow:
+    // Step 1: Job details (jobtitel, erfaring, region)
+    // Step 2: Competencies (ansvarsniveau, team size, skills)
+    // Step 3: Upload payslip + Summary
     const initialStep = computed(() => {
         if (props.report?.step) {
             return props.report.step;
         }
+        // If we have responsibility_level_id, we're ready for step 3
         if (props.report?.responsibility_level_id) {
-            return props.report.skill_ids?.length >= 0 ? 3 : 2;
+            return 3;
+        }
+        // If we have job details, we're ready for step 2
+        if (props.report?.job_title_id && props.report?.region_id && props.report?.experience !== null) {
+            return 2;
         }
         return 1;
     });
@@ -72,11 +86,15 @@ export function useReportForm(options: UseReportFormOptions) {
 
     // Validation errors for step 1
     const step1Errors = reactive<Step1Errors>({
-        document: '',
         job_title_id: '',
         area_of_responsibility_id: '',
         experience: '',
         region_id: '',
+    });
+
+    // Validation errors for step 3
+    const step3Errors = reactive<Step3Errors>({
+        document: '',
     });
 
     // Normalize gender on init
@@ -163,11 +181,7 @@ export function useReportForm(options: UseReportFormOptions) {
     });
 
     const isStep1Valid = computed(() => {
-        if (reportId.value) {
-            return true;
-        }
         return !!(
-            (uploadedFile.value || persistedDocument.value) &&
             form.job_title_id &&
             (!showAreaOfResponsibility.value || form.area_of_responsibility_id) &&
             form.experience !== null &&
@@ -185,7 +199,7 @@ export function useReportForm(options: UseReportFormOptions) {
     const canProceedToStep3 = computed(() => isStep2Valid.value);
 
     const isStep1Completed = computed(() => {
-        return reportId.value !== null || isStep1Valid.value;
+        return isStep1Valid.value;
     });
 
     const isStep2Completed = computed(() => {
@@ -193,7 +207,7 @@ export function useReportForm(options: UseReportFormOptions) {
     });
 
     const isStep3Completed = computed(() => {
-        return isStep2Completed.value;
+        return isStep2Completed.value && isDocumentUploaded.value;
     });
 
     // Navigation
@@ -315,7 +329,6 @@ export function useReportForm(options: UseReportFormOptions) {
 
     // Error handling
     const clearStep1Errors = () => {
-        step1Errors.document = '';
         step1Errors.job_title_id = '';
         step1Errors.area_of_responsibility_id = '';
         step1Errors.experience = '';
@@ -324,11 +337,19 @@ export function useReportForm(options: UseReportFormOptions) {
 
     const setStep1Errors = (errors: Record<string, string>) => {
         clearStep1Errors();
-        if (errors.document) step1Errors.document = errors.document;
         if (errors.job_title_id) step1Errors.job_title_id = errors.job_title_id;
         if (errors.area_of_responsibility_id) step1Errors.area_of_responsibility_id = errors.area_of_responsibility_id;
         if (errors.experience) step1Errors.experience = errors.experience;
         if (errors.region_id) step1Errors.region_id = errors.region_id;
+    };
+
+    const clearStep3Errors = () => {
+        step3Errors.document = '';
+    };
+
+    const setStep3Errors = (errors: Record<string, string>) => {
+        clearStep3Errors();
+        if (errors.document) step3Errors.document = errors.document;
     };
 
     // Navigation and submission
@@ -340,11 +361,11 @@ export function useReportForm(options: UseReportFormOptions) {
             
             // Determine method: use PATCH if report already exists, otherwise use configured method
             const hasExistingReport = reportId.value && reportId.value !== 'guest';
-            const step1Method = hasExistingReport ? 'patch' : (endpoints.step1Method ?? 'post');
-            const step1Url = resolveEndpoint(endpoints.step1, reportId.value);
+            const jobDetailsMethod = hasExistingReport ? 'patch' : (endpoints.jobDetailsMethod ?? 'post');
+            const jobDetailsUrl = resolveEndpoint(endpoints.jobDetails, reportId.value);
             
-            // Build form data - only include document for new reports (POST)
-            const step1Data: Record<string, any> = {
+            // Build form data - job details only, no document
+            const jobDetailsData: Record<string, any> = {
                 job_title_id: form.job_title_id,
                 area_of_responsibility_id: form.area_of_responsibility_id,
                 experience: form.experience,
@@ -352,38 +373,22 @@ export function useReportForm(options: UseReportFormOptions) {
                 region_id: form.region_id,
             };
             
-            // Only include document for new reports
-            if (step1Method === 'post') {
-                step1Data.document = uploadedFile.value || form.document;
-            }
-            
-            const step1Form = useForm(step1Data);
+            const jobDetailsForm = useForm(jobDetailsData);
 
             const submitOptions = {
-                forceFormData: step1Method === 'post',
                 preserveScroll: true,
                 onSuccess: () => {
                     onStep1Success?.();
                 },
                 onError: (errors: Record<string, string>) => {
-                    if (errors.payslip_warning) {
-                        payslipWarning.value = errors.payslip_warning;
-                        showPayslipWarningModal.value = true;
-                        // Use report_id from error response if available (report was saved)
-                        if (errors.report_id) {
-                            reportId.value = parseInt(errors.report_id, 10);
-                            delete errors.report_id;
-                        }
-                        delete errors.payslip_warning;
-                    }
                     setStep1Errors(errors);
                 },
             };
 
-            if (step1Method === 'patch') {
-                step1Form.patch(step1Url, submitOptions);
+            if (jobDetailsMethod === 'patch') {
+                jobDetailsForm.patch(jobDetailsUrl, submitOptions);
             } else {
-                step1Form.post(step1Url, submitOptions);
+                jobDetailsForm.post(jobDetailsUrl, submitOptions);
             }
         } else if (currentStep.value === 2 && canProceedToStep3.value) {
             if (!reportId.value || reportId.value === 'guest') {
@@ -391,16 +396,16 @@ export function useReportForm(options: UseReportFormOptions) {
                 return;
             }
 
-            const step2Url = resolveEndpoint(endpoints.step2, reportId.value);
+            const competenciesUrl = resolveEndpoint(endpoints.competencies, reportId.value);
             
-            const step2Form = useForm({
+            const competenciesForm = useForm({
                 report_id: reportId.value,
                 responsibility_level_id: form.responsibility_level_id,
                 team_size: form.team_size,
                 skill_ids: form.skill_ids,
             });
 
-            step2Form.patch(step2Url, {
+            competenciesForm.patch(competenciesUrl, {
                 preserveScroll: false,
                 onSuccess: () => {
                     onStep2Success?.();
@@ -424,17 +429,50 @@ export function useReportForm(options: UseReportFormOptions) {
             return;
         }
 
-        const submitForm = useForm({
-            report_id: reportId.value,
-            ...additionalData,
-        });
+        clearStep3Errors();
+
+        // First upload the payslip, then submit the report
+        const payslipUrl = resolveEndpoint(endpoints.payslip, reportId.value);
         
-        submitForm.post(endpoints.submit, {
+        const payslipForm = useForm({
+            document: uploadedFile.value || form.document,
+        });
+
+        payslipForm.post(payslipUrl, {
+            forceFormData: true,
+            preserveScroll: true,
             onSuccess: () => {
-                onSubmitSuccess?.();
+                // Payslip uploaded, now submit the report
+                const submitForm = useForm({
+                    report_id: reportId.value,
+                    responsibility_level_id: form.responsibility_level_id,
+                    team_size: form.team_size,
+                    skill_ids: form.skill_ids,
+                    ...additionalData,
+                });
+                
+                submitForm.post(resolveEndpoint(endpoints.submit, reportId.value), {
+                    onSuccess: () => {
+                        onSubmitSuccess?.();
+                    },
+                    onError: (errors: any) => {
+                        console.error('Fejl ved færdiggørelse:', errors);
+                        if (errors.payslip_warning) {
+                            payslipWarning.value = errors.payslip_warning;
+                            showPayslipWarningModal.value = true;
+                            delete errors.payslip_warning;
+                        }
+                    },
+                });
             },
-            onError: (errors: any) => {
-                console.error('Fejl ved færdiggørelse:', errors);
+            onError: (errors: Record<string, string>) => {
+                console.error('Fejl ved upload af lønseddel:', errors);
+                if (errors.payslip_warning) {
+                    payslipWarning.value = errors.payslip_warning;
+                    showPayslipWarningModal.value = true;
+                    delete errors.payslip_warning;
+                }
+                setStep3Errors(errors);
             },
         });
     };
@@ -521,12 +559,22 @@ export function useReportForm(options: UseReportFormOptions) {
             form.team_size = newReport.team_size ?? null;
             form.skill_ids = newReport.skill_ids ?? [];
             
-            let newStep = newReport.step ?? initialStep.value;
-            if (newStep === 1 && newReport.job_title_id && newReport.region_id && newReport.experience !== null) {
-                if (!newReport.responsibility_level_id) {
+            // Determine step based on report state
+            let newStep = newReport.step ?? 1;
+            
+            // If step is not explicitly set, calculate it based on available data
+            if (!newReport.step) {
+                if (newReport.responsibility_level_id) {
+                    // Competencies done, go to step 3 (upload)
+                    newStep = 3;
+                } else if (newReport.job_title_id && newReport.region_id && newReport.experience !== null) {
+                    // Job details done, go to step 2 (competencies)
                     newStep = 2;
+                } else {
+                    newStep = 1;
                 }
             }
+            
             currentStep.value = newStep;
         }
     }, { immediate: true });
@@ -584,6 +632,7 @@ export function useReportForm(options: UseReportFormOptions) {
         
         // Errors
         step1Errors,
+        step3Errors,
         payslipWarning,
         showPayslipWarningModal,
         

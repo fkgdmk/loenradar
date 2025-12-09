@@ -126,7 +126,7 @@ const successMessage = ref('');
 onMounted(() => {
     const flash = page.props.flash as { success?: string } | undefined;
     if (flash?.success) {
-        successMessage.value = 'Din rapport blev genereret';
+        successMessage.value = 'Din rapport blev genereret. Tak for hjælpen med at gøre vores database endnu bedre!';
         showSuccessAlert.value = true;
         
         // Auto-hide after 5 seconds
@@ -577,7 +577,8 @@ const formattedConclusion = computed(() => {
                     <!-- Job Postings Card -->
                     <Card v-if="report.job_postings && report.job_postings.length > 0">
                         <CardHeader>
-                            <CardTitle class="text-base sm:text-lg">Matchende Jobopslag</CardTitle>
+                            <CardTitle class="text-base sm:text-lg">
+                                <span>Matchende Jobopslag</span> <span class="text-muted-foreground text-sm">der inkluderer løn</span></CardTitle>
                             <CardDescription class="text-xs sm:text-sm">
                                 Jobopslag der matcher din profil baseret på job titel, region, erfaring og skills.
                             </CardDescription>

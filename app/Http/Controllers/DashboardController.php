@@ -159,7 +159,7 @@ class DashboardController extends Controller
             ->whereNotNull('regions.statistical_group')
             ->select('job_titles.name', 'regions.statistical_group as region_name', DB::raw('COUNT(*) as count'))
             ->groupBy('job_titles.id', 'job_titles.name', 'regions.statistical_group')
-            ->havingRaw('COUNT(*) >= 5')
+            ->havingRaw('COUNT(*) >= 1')
             ->orderBy('count', 'desc')
             ->get()
             ->map(function ($item) {
@@ -176,9 +176,10 @@ class DashboardController extends Controller
             ->join('regions', 'job_postings.region_id', '=', 'regions.id')
             ->whereNotNull('job_postings.region_id')
             ->whereNotNull('regions.statistical_group')
+            ->whereNotNull('job_postings.salary_from')
             ->select('job_titles.name', 'regions.statistical_group as region_name', DB::raw('COUNT(*) as count'))
             ->groupBy('job_titles.id', 'job_titles.name', 'regions.statistical_group')
-            ->havingRaw('COUNT(*) >= 3')
+            ->havingRaw('COUNT(*) >= 1')
             ->orderBy('count', 'desc')
             ->get()
             ->map(function ($item) {
@@ -258,6 +259,7 @@ class DashboardController extends Controller
             ->join('job_postings', 'job_titles.id', '=', 'job_postings.job_title_id')
             ->whereNotNull('job_postings.job_title_id')
             ->whereNotNull('job_postings.minimum_experience')
+            ->whereNotNull('job_postings.salary_from')
             ->select(
                 'job_titles.name',
                 DB::raw('CASE 
@@ -276,7 +278,7 @@ class DashboardController extends Controller
                     ELSE "10+ år"
                 END')
             )
-            ->havingRaw('COUNT(*) >= 3')
+            ->havingRaw('COUNT(*) >= 1')
             ->orderBy('count', 'desc')
             ->get()
             ->map(function ($item) {

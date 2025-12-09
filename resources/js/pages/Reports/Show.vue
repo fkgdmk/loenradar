@@ -316,7 +316,7 @@ const formattedConclusion = computed(() => {
                             <Dialog>
                                 <DialogTrigger as-child>
                                     <span class="font-semibold underline cursor-pointer hover:text-primary transition-colors">
-                                        {{ report.payslips.length }} lønsedler
+                                        {{ report.payslips.length }} verificerede lønsedler
                                     </span>
                                 </DialogTrigger>
                                 <DialogContent class="sm:max-w-xl max-h-[80vh] overflow-y-auto">

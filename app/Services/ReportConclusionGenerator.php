@@ -43,9 +43,9 @@ class ReportConclusionGenerator
     private function generateFullMatchConclusion(Report $report): string
     {
         $jobTitle = $report->jobTitle->name_en ?? 'din stilling';
-        $region = $report->region->name ?? 'din region';
+        $region = $report->region->statistical_group ?? 'din region';
         $experience = $report->experience;
-        $experienceRange = $report->match_metadata['experience_range'] ?? [0, 100];
+        $experienceRange = $report->match_metadata['experience_range'] ?? [0, 50];
         $experienceRangeLabel = $this->getExperienceRangeLabel($experience);
         $count = $this->getPayslipCount($report);
         
@@ -133,31 +133,26 @@ class ReportConclusionGenerator
     private function generateWithinRangeConclusion(Report $report, int $dataExpMin, int $dataExpMax): string
     {
         $experience = $report->experience;
-        $region = $report->region->name ?? 'din region';
-        $count = $this->getPayslipCount($report);
+        $region = $report->region->statistical_group ?? 'din region';
         
         $rangeSpan = max($dataExpMax - $dataExpMin, 1);
         $positionInRange = ($experience - $dataExpMin) / $rangeSpan;
         
-        $lowerFormatted = $this->formatSalary($report->lower_percentile);
-        $upperFormatted = $this->formatSalary($report->upper_percentile);
+        // Beregn anbefalet lønudspil med den nye algoritme
+        $recommendedRange = $this->calculateRecommendedSalaryRange($positionInRange, $report);
+        $recommendedLower = $this->formatSalary($recommendedRange['lower']);
+        $recommendedUpper = $this->formatSalary($recommendedRange['upper']);
         
         $matchContext = $report->payslip_match === PayslipMatchType::REGION_MATCH 
             ? "i {$region}" 
             : "på landsplan";
         
-        // Bestem hvilket interval der er relevant baseret på position
+        // Bestem tekst baseret på position
         if ($positionInRange >= 0.67) {
-            $recommendedLower = $this->formatSalary($report->median);
-            $recommendedUpper = $this->formatSalary($report->upper_percentile);
-            $positionDescription = "i den erfarne ende af dette datasæt, hvilket typisk indikerer, at din markedsværdi ligger i den øvre del af intervallet";
+            $positionDescription = "i den erfarne ende af dette datasæt. Grundet spredningen i tallene har vi beregnet et niveau, der ligger over gennemsnittet, men som samtidig tager højde for variationen i markedet";
         } elseif ($positionInRange <= 0.33) {
-            $recommendedLower = $this->formatSalary($report->lower_percentile);
-            $recommendedUpper = $this->formatSalary($report->median);
             $positionDescription = "i den mindre erfarne del af dette datasæt, hvilket typisk indikerer, at din markedsværdi ligger i den nedre del af intervallet";
         } else {
-            $recommendedLower = $lowerFormatted;
-            $recommendedUpper = $upperFormatted;
             $positionDescription = "i midten af dette datasæt erfaringsmæssigt";
         }
         
@@ -168,7 +163,7 @@ class ReportConclusionGenerator
         return $conclusion;
     }
 
-    /**
+    /** 
      * Konklusion når brugerens erfaring er over datasættets maksimum
      */
     private function generateAboveRangeConclusion(Report $report, int $dataExpMin, int $dataExpMax): string
@@ -177,12 +172,10 @@ class ReportConclusionGenerator
         $maxSalary = $report->match_metadata['salary_max'] ?? $report->upper_percentile;
         $maxFormatted = $this->formatSalary($maxSalary);
         
-        $conclusion = "**Datagrundlag:** {$dataExpMin}–{$dataExpMax} års erfaring\n\n";
-        $conclusion .= "Vi har i øjeblikket flest data på profiler med kortere anciennitet end dig.\n\n";
-        $conclusion .= "**Din profil ({$experience} år):**\n";
-        $conclusion .= "Da du har markant mere erfaring end gennemsnittet i vores database, kan vi ikke give dig et præcist markeds-estimat endnu.\n\n";
+        $conclusion = "**Datagrundlag:** Vi har i øjeblikket flest data på profiler med kortere anciennitet end dig. Dette datasæt dækker {$dataExpMin}–{$dataExpMax} års erfaring.\n\n";
+        $conclusion .= "**Din profil:** Da du har markant mere erfaring end gennemsnittet i vores database, kan vi ikke give dig et præcist markeds-estimat endnu.\n\n";
         $conclusion .= "📊 **Til sammenligning:** Toppen for profiler med {$dataExpMax} års erfaring ligger på {$maxFormatted}.\n\n";
-        $conclusion .= "💡 Som seniorprofil med {$experience} års erfaring bør du naturligvis ligge væsentligt over dette niveau.";
+        $conclusion .= "💡 Som seniorprofil med {$experience} års erfaring bør du ligge omkring eller over dette niveau.";
         
         return $conclusion;
     }
@@ -196,12 +189,10 @@ class ReportConclusionGenerator
         $minSalary = $report->match_metadata['salary_min'] ?? $report->lower_percentile;
         $minFormatted = $this->formatSalary($minSalary);
         
-        $conclusion = "**Datagrundlag:** {$dataExpMin}–{$dataExpMax} års erfaring\n\n";
-        $conclusion .= "Vi har i øjeblikket flest data på profiler med mere erfaring end dig.\n\n";
-        $conclusion .= "**Din profil ({$experience} år):**\n";
-        $conclusion .= "Da du har mindre erfaring end de fleste i vores database for denne stilling, kan vi kun give dig et vejledende estimat.\n\n";
+        $conclusion = "**Datagrundlag:** Vi har i øjeblikket flest data på profiler med mere erfaring end dig. Dette datasæt dækker {$dataExpMin}–{$dataExpMax} års erfaring.\n\n";
+        $conclusion .= "**Din profil:** Da du har mindre erfaring end de fleste i vores database for denne stilling, kan vi kun give dig et vejledende estimat.\n\n";
         $conclusion .= "📊 **Til sammenligning:** Bunden for profiler med {$dataExpMin} års erfaring ligger på {$minFormatted}.\n\n";
-        $conclusion .= "💡 Som ny i branchen med {$experience} års erfaring er det naturligt at starte lidt under dette niveau, men du har et stort vækstpotentiale.";
+        $conclusion .= "💡 Som ny i branchen med {$experience} års erfaring er det naturligt at starte omkring eller under dette niveau, men du har et stort vækstpotentiale.";
         
         return $conclusion;
     }
@@ -243,6 +234,7 @@ class ReportConclusionGenerator
 
     /**
      * Beregn anbefalet løninterval baseret på position i erfaringsintervallet
+     * Bruger "Median Gravity" til at håndtere skæve datasæt
      */
     private function calculateRecommendedSalaryRange(float $positionInRange, Report $report): array
     {
@@ -250,24 +242,31 @@ class ReportConclusionGenerator
         $median = (float) $report->median;
         $upper = (float) $report->upper_percentile;
         
-        // Hvis i øverste tredjedel af erfaringsintervallet
-        if ($positionInRange >= 0.67) {
-            return ['lower' => $median, 'upper' => $upper];
-        }
+        // 1. Beregn det "lineære" målpunkt baseret udelukkende på erfaring
+        $totalSpan = $upper - $lower;
+        // Sikr at position er mellem 0 og 1
+        $positionInRange = max(0, min(1, $positionInRange));
+        $linearTarget = $lower + ($totalSpan * $positionInRange);
         
-        // Hvis i nederste tredjedel
-        if ($positionInRange <= 0.33) {
-            return ['lower' => $lower, 'upper' => $median];
-        }
+        // 2. Bestem "Median Gravity" (hvor meget vi stoler på medianen)
+        $count = $this->getPayslipCount($report);
+        // Højere gravity (0.7) ved få data (< 15) trækker estimatet mod medianen for at undgå outliers
+        // Ved mere data (0.3) stoler vi mere på spredningen
+        $gravity = $count < 15 ? 0.7 : 0.3;
         
-        // Midten - interpoler baseret på position
-        $salaryRange = $upper - $lower;
-        $baseLower = $lower + ($salaryRange * $positionInRange * 0.5);
-        $baseUpper = $median + ($salaryRange * $positionInRange * 0.3);
+        // 3. Beregn det vægtede målpunkt
+        $weightedTarget = ($median * $gravity) + ($linearTarget * (1.0 - $gravity));
         
+        // 4. Byg et interval omkring det vægtede punkt (+/- 15% af spændet)
+        $halfWidth = $totalSpan * 0.15;
+        
+        $recLower = $weightedTarget - $halfWidth;
+        $recUpper = $weightedTarget + $halfWidth;
+        
+        // 5. Returner interval (clamped til statistiske grænser)
         return [
-            'lower' => round($baseLower, -3),
-            'upper' => min(round($baseUpper, -3), $upper),
+            'lower' => round(max($recLower, $lower), -3),
+            'upper' => round(min($recUpper, $upper), -3),
         ];
     }
 

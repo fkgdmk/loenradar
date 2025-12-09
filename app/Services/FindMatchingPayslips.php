@@ -71,7 +71,8 @@ class FindMatchingPayslips
         }
 
         // Forsøg 4: Kun jobtitel matcher (hele landet, alle erfaringsniveauer)
-        if ($matchType === PayslipMatchType::REGION_MATCH && $matchingPayslips->count() < 10) {
+        $regionMatchThreshold = 10;
+        if ($matchType === PayslipMatchType::REGION_MATCH && $matchingPayslips->count() < $regionMatchThreshold) {
             $description = "Rapporten viser det generelle lønniveau for hele landet, på tværs af alle erfaringsniveauer, da vi mangler mere data for din profil. Tallene er derfor kun vejledende.";
 
             $matchingPayslips = $baseQuery->clone()->get();
@@ -89,7 +90,7 @@ class FindMatchingPayslips
             $displayCount = max($count, 3);
             $description = "Vi fandt desværre kun {$displayCount} datapunkter der passede på din profil.";
             $matchType = PayslipMatchType::INSUFFICIENT_DATA;
-        } elseif ($count < 10) {
+        } elseif ($count < $regionMatchThreshold) {
             // 5-9 payslips - begrænset data, men brugbart
             if ($matchType === PayslipMatchType::REGION_MATCH || $matchType === PayslipMatchType::TITLE_MATCH) {
                 $matchType = PayslipMatchType::LIMITED_DATA;
@@ -126,7 +127,7 @@ class FindMatchingPayslips
         if ($years <= 9) {
             return [4, 9];
         }
-        return [10, 100]; // 10+ år
+        return [10, 50]; // 10+ år
     }
 
     /**

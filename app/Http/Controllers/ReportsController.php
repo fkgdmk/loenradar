@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PayslipMatchType;
 use App\Models\AreaOfResponsibility;
 use App\Models\JobPosting;
 use App\Models\JobTitle;
@@ -252,6 +253,8 @@ class ReportsController extends Controller
             'skill_ids' => $skillIds,
             'step' => $step,
             'document' => $document,
+            'payslip_match' => $report->payslip_match,
+            'match_metadata' => $report->match_metadata,
         ];
     }
 
@@ -302,6 +305,9 @@ class ReportsController extends Controller
             ]);
 
             DB::commit();
+
+            // Calculate and save match status
+            $this->updateReportMatchStatus($report);
 
             return redirect()->route('reports.create', ['report_id' => $report->id]);
         } catch (\Exception $e) {
@@ -367,13 +373,22 @@ class ReportsController extends Controller
             $result = $findMatchingPayslips->find($report);
             $matchingPayslips = $result['payslips'];
             $description = $result['description'];
+            $matchType = $result['match_type'];
 
-            // Hvis der ikke er nok payslips (under 5), returner fejl med report_id
-            if ($matchingPayslips->count() < 5 && $description) {
-                return back()->withErrors([
-                    'payslip_warning' => $description,
-                    'report_id' => $report->id,
-                ]);
+            // Check if we should override INSUFFICIENT_DATA
+            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
+                 $findMatchingJobPostings = new FindMatchingJobPostings();
+                 $jobCount = $findMatchingJobPostings->findAndAttach($report);
+                 
+                 if ($jobCount >= 3) {
+                     $matchType = PayslipMatchType::LIMITED_DATA;
+                 }
+            }
+
+            // Hvis der ikke er nok payslips (under 5) og vi stadig er på INSUFFICIENT_DATA
+            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
+                return redirect()->route('reports.index')
+                    ->with('success', 'Tak for at være med til at bygge danmarks største løn database');
             }
 
             return back();
@@ -478,6 +493,9 @@ class ReportsController extends Controller
 
             DB::commit();
 
+            // Calculate and save match status
+            $this->updateReportMatchStatus($report);
+
             return redirect()->route('get-started', ['report_id' => $report->id]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -554,9 +572,20 @@ class ReportsController extends Controller
             $result = $findMatchingPayslips->find($report);
             $matchingPayslips = $result['payslips'];
             $description = $result['description'];
+            $matchType = $result['match_type'];
+
+            // Check if we should override INSUFFICIENT_DATA
+            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
+                 $findMatchingJobPostings = new FindMatchingJobPostings();
+                 $jobCount = $findMatchingJobPostings->findAndAttach($report);
+                 
+                 if ($jobCount >= 3) {
+                     $matchType = PayslipMatchType::LIMITED_DATA;
+                 }
+            }
 
             // If not enough payslips, return error with report_id
-            if ($matchingPayslips->count() < 5 && $description) {
+            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $description) {
                 return back()->withErrors([
                     'payslip_warning' => $description,
                     'report_id' => $report->id,
@@ -644,6 +673,9 @@ class ReportsController extends Controller
             ]);
 
             DB::commit();
+
+            // Calculate and save match status
+            $this->updateReportMatchStatus($report);
 
             return redirect()->route('get-started', ['report_id' => $report->id]);
         } catch (\Exception $e) {
@@ -763,6 +795,15 @@ class ReportsController extends Controller
             $matchType = $result['match_type'];
             $metadata = $result['metadata'];
 
+            // Find and attach matching job postings
+            $findMatchingJobPostings = new FindMatchingJobPostings();
+            $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
+
+            // Check if we should override INSUFFICIENT_DATA
+            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $jobPostingCount >= 3) {
+                 $matchType = PayslipMatchType::LIMITED_DATA;
+            }
+
             $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
             $count = $salaries->count();
 
@@ -779,9 +820,15 @@ class ReportsController extends Controller
                 $report->payslips()->sync($matchingPayslips->pluck('id'));
             }
 
-            // Mark report as completed with statistics and match data
+            // Determine status
+            $status = 'completed';
+            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
+                $status = 'draft';
+            }
+
+            // Mark report as completed (or draft) with statistics and match data
             $report->update([
-                'status' => 'completed',
+                'status' => $status,
                 'lower_percentile' => $lower,
                 'median' => $median,
                 'upper_percentile' => $upper,
@@ -793,10 +840,6 @@ class ReportsController extends Controller
             // Generate conclusion using dedicated service
             $conclusionGenerator = new ReportConclusionGenerator();
             $conclusionGenerator->generate($report);
-
-            // Find and attach matching job postings
-            $findMatchingJobPostings = new FindMatchingJobPostings();
-            $findMatchingJobPostings->findAndAttach($report);
 
             // Count active job postings from thehub.io for this job title
             $activeJobPostingsCount = JobPosting::where('job_title_id', $report->job_title_id)
@@ -882,6 +925,9 @@ class ReportsController extends Controller
             ]);
 
             DB::commit();
+
+            // Calculate and save match status
+            $this->updateReportMatchStatus($report);
 
             return redirect()->route('reports.create', ['report_id' => $report->id]);
         } catch (\Exception $e) {
@@ -995,9 +1041,8 @@ class ReportsController extends Controller
                 ]);
             }
 
-            // Opdater report med step 2 data og markér som completed
+            // Opdater report med step 2 data
             $report->update([
-                'status' => 'completed',
                 'filters' => array_merge($report->filters ?? [], [
                     'responsibility_level_id' => $validated['responsibility_level_id'],
                     'team_size' => $validated['team_size'] ?? null,
@@ -1012,6 +1057,15 @@ class ReportsController extends Controller
             $description = $result['description'];
             $matchType = $result['match_type'];
             $metadata = $result['metadata'];
+
+            // Find and attach matching job postings
+            $findMatchingJobPostings = new FindMatchingJobPostings();
+            $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
+
+            // Check if we should override INSUFFICIENT_DATA
+            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $jobPostingCount >= 3) {
+                 $matchType = PayslipMatchType::LIMITED_DATA;
+            }
 
             $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
             $count = $salaries->count();
@@ -1029,7 +1083,14 @@ class ReportsController extends Controller
                 $report->payslips()->sync($matchingPayslips->pluck('id'));
             }
 
+            // Determine status
+            $status = 'completed';
+            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
+                $status = 'draft';
+            }
+
             $report->update([
+                'status' => $status,
                 'lower_percentile' => $lower,
                 'median' => $median,
                 'upper_percentile' => $upper,
@@ -1042,10 +1103,6 @@ class ReportsController extends Controller
             $conclusionGenerator = new ReportConclusionGenerator();
             $conclusionGenerator->generate($report);
 
-            // Find og forbind matchende job postings
-            $findMatchingJobPostings = new FindMatchingJobPostings();
-            $findMatchingJobPostings->findAndAttach($report);
-
             // Count active job postings from thehub.io for this job title
             $activeJobPostingsCount = JobPosting::where('job_title_id', $report->job_title_id)
                 ->where('source', 'thehub.io')
@@ -1057,6 +1114,11 @@ class ReportsController extends Controller
 
             DB::commit();
 
+            if ($status === 'draft') {
+                return redirect()->route('reports.index')
+                    ->with('success', 'Tak for at være med til at bygge danmarks største løn database');
+            }
+
             return redirect()->route('reports.show', $report->id)
                 ->with('success', 'Rapport oprettet succesfuldt');
         } catch (\Exception $e) {
@@ -1065,6 +1127,32 @@ class ReportsController extends Controller
         }
     }
 
+
+    /**
+     * Helper to update match status and metadata based on current report data.
+     */
+    private function updateReportMatchStatus(Report $report)
+    {
+        $findMatchingPayslips = new FindMatchingPayslips();
+        $result = $findMatchingPayslips->find($report);
+        $matchType = $result['match_type'];
+        
+        // Check if we should override INSUFFICIENT_DATA with job postings
+        if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
+            $findMatchingJobPostings = new FindMatchingJobPostings();
+            $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
+            
+            if ($jobPostingCount >= 3) {
+                // If we have enough job postings, we consider it "limited data" instead of insufficient
+                $matchType = PayslipMatchType::LIMITED_DATA;
+            }
+        }
+        
+        $report->update([
+            'payslip_match' => $matchType,
+            'match_metadata' => $result['metadata'],
+        ]);
+    }
 
     private function calculatePercentile($sortedData, $percentile)
     {

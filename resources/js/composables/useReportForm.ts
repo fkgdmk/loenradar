@@ -49,6 +49,10 @@ export function useReportForm(options: UseReportFormOptions) {
     const payslipWarning = ref<string | null>(null);
     const showPayslipWarningModal = ref(false);
 
+    // Match info
+    const payslipMatch = ref<string | null>(props.report?.payslip_match ?? null);
+    const matchMetadata = ref<any>(props.report?.match_metadata ?? {});
+
     // Step calculation - New flow:
     // Step 1: Job details (jobtitel, erfaring, region)
     // Step 2: Competencies (ansvarsniveau, team size, skills)
@@ -559,6 +563,9 @@ export function useReportForm(options: UseReportFormOptions) {
             form.team_size = newReport.team_size ?? null;
             form.skill_ids = newReport.skill_ids ?? [];
             
+            payslipMatch.value = newReport.payslip_match ?? null;
+            matchMetadata.value = newReport.match_metadata ?? {};
+
             // Determine step based on report state
             let newStep = newReport.step ?? 1;
             
@@ -674,6 +681,10 @@ export function useReportForm(options: UseReportFormOptions) {
         getAreaOfResponsibilityName,
         getResponsibilityLevelName,
         getSkillNames,
+
+        // Match info
+        payslipMatch,
+        matchMetadata,
     };
 }
 

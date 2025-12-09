@@ -65,6 +65,20 @@ onMounted(() => {
 const submitButtonText = computed(() => 
     isAuthenticated.value ? 'Generer Rapport' : 'Log ind & generer'
 );
+
+const isInsufficientData = computed(() => reportForm.payslipMatch.value === 'insufficient_data');
+
+const authModalTitle = computed(() => 
+    isInsufficientData.value 
+        ? 'Log ind' 
+        : 'Log ind for at se din rapport'
+);
+
+const authModalDescription = computed(() => 
+    isInsufficientData.value
+        ? 'Opret en konto eller log ind, så vi kan kontakte dig når din rapport er klar'
+        : 'Opret en konto eller log ind for at generere og gemme din lønrapport'
+);
 </script>
 
 <template>
@@ -82,8 +96,8 @@ const submitButtonText = computed(() =>
         <!-- Auth Modal for guests -->
         <AuthModal
             v-model:open="showAuthModal"
-            title="Log ind for at se din rapport"
-            description="Opret en konto eller log ind for at generere og gemme din lønrapport"
+            :title="authModalTitle"
+            :description="authModalDescription"
             @success="handleAuthSuccess"
         />
     </GuestLayout>

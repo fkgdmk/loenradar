@@ -24,6 +24,7 @@ import {
     LogIn,
     Mail,
     Image,
+    Rocket,
 } from 'lucide-vue-next';
 import type { useReportForm } from '@/composables/useReportForm';
 
@@ -108,6 +109,32 @@ const triggerEditAnonymizer = () => {
     rf.value.fileToAnonymize.value = rf.value.uploadedFile.value;
     rf.value.showAnonymizer.value = true;
 };
+
+const isInsufficientData = computed(() => rf.value.payslipMatch.value === 'insufficient_data');
+const isLimitedData = computed(() => rf.value.payslipMatch.value === 'limited_data');
+
+const payslipCountDisplay = computed(() => {
+    const count = rf.value.matchMetadata.value?.payslip_count ?? 0;
+    if (count < 1) return 2;
+    if (count <= 2) return 3;
+    return count; // 4 or more shows actual count
+});
+
+const payslipsNeeded = computed(() => 5 - payslipCountDisplay.value);
+const progressPercentage = computed(() => (payslipCountDisplay.value / 5) * 100);
+
+const effectiveSubmitButtonText = computed(() => {
+    if (isInsufficientData.value) {
+        if (!props.isAuthenticated) {
+            return 'Log ind & Upload';
+        }
+        return 'Upload';
+    }
+    if (isLimitedData.value) {
+        return 'Upload';
+    }
+    return props.submitButtonText;
+});
 
 const handleSubmit = () => {
     emit('submit');
@@ -201,9 +228,9 @@ const handleSubmit = () => {
                     <span v-else-if="rf.currentStep.value === 2">
                         Beskriv dit ansvarsniveau og vælg dine færdigheder
                     </span>
-                    <span v-else-if="!rf.isDocumentUploaded.value">
-                        Upload din lønseddel og anonymiser den ved at strege sensitive data over
-                    </span>
+                    <div v-else-if="!rf.isDocumentUploaded.value">
+                        Upload din lønseddel og anonymiser den ved at strege sensitive data over direkte i browseren. <div class="mt-2">Vi gemmer kun den anonymiserede version.</div>
+                    </div>
                     <span v-else>
                         Gennemgå dine valg og {{ showAuthPrompt ? 'opret en konto for at se din rapport' : 'generer din rapport' }}
                     </span>
@@ -270,6 +297,39 @@ const handleSubmit = () => {
 
                 <!-- Step 2: Ansvar og færdigheder -->
                 <div v-if="rf.currentStep.value === 2" class="space-y-6">
+                    <div v-if="isInsufficientData" class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 border border-primary/10 p-5">
+                        
+                        <div class="relative space-y-4">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+                                    <Rocket class="h-5 w-5 text-primary-foreground" />
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-foreground text-base">Vi er tæt på at have nok data for din profil!</h3>
+                                    <p class="text-sm text-muted-foreground mt-0.5">Hjælp os i mål, ved at uploade din anonymiserede lønseddel i sidste trin.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-muted-foreground">Lønsedler indsamlet</span>
+                                    <span class="font-semibold text-foreground">{{ payslipCountDisplay }} af 5</span>
+                                </div>
+                                <div class="h-2.5 bg-primary/10 rounded-full overflow-hidden">
+                                    <div 
+                                        class="h-full bg-primary rounded-full transition-all duration-500"
+                                        :style="{ width: `${progressPercentage}%` }"
+                                    ></div>
+                                </div>
+                                <p class="text-xs text-muted-foreground">Vi mangler kun {{ payslipsNeeded }} mere for at kunne bygge din rapport</p>
+                            </div>
+                            
+                            <p class="text-sm text-foreground leading-relaxed font-semibold">
+                                Vi sender dig rapporten automatisk, så snart vi har 5 lønsedler.
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Responsibility Level -->
                     <div>
                         <Label class="mb-2">
@@ -345,6 +405,21 @@ const handleSubmit = () => {
 
                 <!-- Step 3: Upload og Generer -->
                 <div v-if="rf.currentStep.value === 3" class="space-y-6">
+                    <div v-if="isInsufficientData" class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 border border-primary/10 p-5">
+                        
+                        <div class="relative">
+                            <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/25">
+                                    <Rocket class="h-5 w-5 text-primary-foreground" />
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-foreground text-base">Vi er tæt på at have nok data for din profil!</h3>
+                                    <p class="text-sm text-muted-foreground mt-0.5">Hjælp os i mål, ved at uploade din anonymiserede lønseddel her.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- File Upload Section -->
                     <div>
                         <div v-if="rf.uploadedFile.value" class="mt-2">
@@ -520,7 +595,7 @@ const handleSubmit = () => {
                         </div>
 
                         <!-- Auth info for guests -->
-                        <div v-if="showAuthPrompt" class="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                        <div v-if="showAuthPrompt && !isInsufficientData" class="rounded-lg border border-primary/20 bg-primary/5 p-4">
                             <p class="text-center font-bold">
                                 <Sparkles class="inline h-4 w-4 mr-1 text-primary" />
                                 Opret en gratis konto eller log ind for at se din personlige rapport
@@ -562,7 +637,7 @@ const handleSubmit = () => {
                             @click="handleSubmit"
                         >
                             <Sparkles class="mr-2 h-4 w-4" />
-                            {{ submitButtonText }}
+                            {{ effectiveSubmitButtonText }}
                         </Button>
                     </div>
                 </div>
@@ -573,58 +648,40 @@ const handleSubmit = () => {
     <!-- Payslip Warning Modal -->
     <Dialog :open="rf.showPayslipWarningModal.value" @update:open="rf.showPayslipWarningModal.value = $event">
         <DialogContent class="sm:max-w-xl">
-            <div class="whitespace-pre-line text-base mt-4 mx-4 space-y-2">
-                <div class="font-bold">
-                    {{ rf.payslipWarning.value }}
-                </div>
-                <div>
-                    Det er desværre ikke nok til at kunne lave en værdifuld rapport.
-                </div>
-                <div>
-                    Vi arbejder på at samle mere data, så vi kan give dig et mere præcist billede af dit lønniveau.
+            <div class="flex flex-col items-center text-center space-y-6 pt-6">
+                <!-- Icon and Title -->
+                <div class="rounded-full bg-primary/10 p-3">
+                    <Sparkles class="h-8 w-8 text-primary" />
                 </div>
                 
-                <!-- For ikke-autentificerede brugere: vis email input og login link -->
-                <template v-if="!isAuthenticated">
-                    <div class="pt-2 space-y-4">
-                        <div class="space-y-2">
-                            <Label for="contact-email" class="flex items-center gap-2">
-                                <Mail class="h-4 w-4" />
-                                Indtast din email, så kontakter vi dig når vi er i mål
-                            </Label>
-                            <Input
-                                id="contact-email"
-                                v-model="contactEmail"
-                                type="email"
-                                placeholder="din@email.dk"
-                            />
-                        </div>
-                        
-                        <div class="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>eller</span>
-                            <Link 
-                                :href="login()" 
-                                class="inline-flex items-center gap-1 text-primary hover:underline font-medium"
-                            >
-                                <LogIn class="h-4 w-4" />
-                                Log ind / Opret ny bruger
-                            </Link>
-                        </div>
-                    </div>
-                </template>
-                
-                <!-- For autentificerede brugere: vis standard besked -->
-                <template v-else>
-                    <div>
-                        Vi kontakter dig lige så snart vi er i mål for din profil!
-                    </div>
-                </template>
+                <div class="space-y-2">
+                    <h2 class="text-xl font-semibold tracking-tight">
+                        Tak for dit bidrag!
+                    </h2>
+                    <p class="text-muted-foreground max-w-sm mx-auto">
+                        Opret en gratis konto for at få besked, når vi har indsamlet nok data til din rapport.
+                    </p>
+                </div>
+
+                <!-- Action Button -->
+                <div class="w-full max-w-sm space-y-3">
+                    <Link 
+                        :href="login(isInsufficientData ? { notice: 'Opret en konto eller log ind, så vi kan kontakte dig når din rapport er klar' } : {})" 
+                        class="inline-flex w-full items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                    >
+                        <LogIn class="mr-2 h-4 w-4" />
+                        Log ind / Opret ny bruger
+                    </Link>
+                    
+                    <Button 
+                        variant="ghost" 
+                        class="w-full"
+                        @click="rf.closePayslipWarningModal()"
+                    >
+                        Nej tak, jeg vil ikke gemme mit bidrag
+                    </Button>
+                </div>
             </div>
-            <DialogFooter>
-                <Button @click="rf.closePayslipWarningModal(contactEmail)">
-                    Forstået
-                </Button>
-            </DialogFooter>
         </DialogContent>
     </Dialog>
 </template>

@@ -51,6 +51,8 @@ export interface ReportData {
     step: number;
     document?: UploadedDocument | null;
     is_guest?: boolean;
+    payslip_match?: string | null;
+    match_metadata?: any;
 }
 
 export interface ReportFormProps {

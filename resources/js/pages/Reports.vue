@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { dashboard } from '@/routes';
-import { Briefcase, MapPin, TrendingUp, Calendar, Plus, FileText } from 'lucide-vue-next';
+import { MapPin, TrendingUp, Calendar, Plus, FileText } from 'lucide-vue-next';
+import ToastSuccessAlert from '@/components/ToastSuccessAlert.vue';
+import { ref, onMounted, watch } from 'vue';
 
 interface Report {
     id: number;
@@ -19,6 +21,7 @@ interface Report {
     median: number | null;
     upper_percentile: number | null;
     conclusion: string | null;
+    status: 'completed' | 'draft';
     created_at: string;
 }
 
@@ -38,6 +41,35 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/reports',
     },
 ];
+
+// Flash message handling
+const page = usePage();
+const showSuccessAlert = ref(false);
+
+const checkFlashMessage = () => {
+    const flash = page.props.flash as { success?: string } | undefined;
+    if (flash?.success) {
+        showSuccessAlert.value = true;
+    }
+};
+
+onMounted(() => {
+    // Scroll to top when component mounts
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Check flash message after a small delay to ensure props are loaded
+    setTimeout(() => {
+        checkFlashMessage();
+    }, 100);
+});
+
+// Watch for changes in flash messages (e.g., after redirect)
+watch(() => page.props.flash, () => {
+    checkFlashMessage();
+}, { deep: true });
+
+const dismissSuccessAlert = () => {
+    showSuccessAlert.value = false;
+};
 
 const formatCurrency = (value: number | null): string => {
     if (!value) return 'N/A';
@@ -91,14 +123,87 @@ const formatCurrency = (value: number | null): string => {
                 v-else
                 class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
             >
-                <Link
-                    v-for="report in props.reports"
-                    :key="report.id"
-                    :href="`/reports/${report.id}`"
-                    class="block"
-                >
+                <template v-for="report in props.reports" :key="report.id">
+                    <!-- Completed Reports (clickable) -->
+                    <Link
+                        v-if="report.status !== 'draft'"
+                        :href="`/reports/${report.id}`"
+                        class="block"
+                    >
+                        <Card
+                            class="hover:shadow-md transition-shadow flex flex-col cursor-pointer"
+                        >
+                            <CardHeader>
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <CardTitle class="text-lg mb-2">
+                                            {{ report.job_title || 'Ukendt jobtitel' }}
+                                        </CardTitle>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent class="flex flex-col flex-1 space-y-4">
+                                <!-- Region og Erfaring -->
+                                <div class="flex flex-wrap gap-2">
+                                    <Badge
+                                        v-if="report.region"
+                                        variant="secondary"
+                                        class="flex items-center gap-1"
+                                    >
+                                        <MapPin class="h-3 w-3" />
+                                        {{ report.region }}
+                                    </Badge>
+                                    <Badge
+                                        v-if="report.experience !== null"
+                                        variant="secondary"
+                                    >
+                                        {{ report.experience }} års erfaring
+                                    </Badge>
+                                    <Badge
+                                        v-if="report.area_of_responsibility"
+                                        variant="secondary"
+                                    >
+                                        {{ report.area_of_responsibility }}
+                                    </Badge>
+                                </div>
+
+                                <!-- Lønstatistikker -->
+                                <div class="space-y-2 border-t pt-4">
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-muted-foreground">Median løn:</span>
+                                        <span class="font-semibold text-foreground">
+                                            {{ formatCurrency(report.median) }}
+                                        </span>
+                                    </div>
+                                    <div
+                                        v-if="report.lower_percentile || report.upper_percentile"
+                                        class="flex items-center gap-2 text-xs text-muted-foreground"
+                                    >
+                                        <span v-if="report.lower_percentile">
+                                            {{ formatCurrency(report.lower_percentile) }}
+                                        </span>
+                                        <TrendingUp class="h-3 w-3" />
+                                        <span v-if="report.upper_percentile">
+                                            {{ formatCurrency(report.upper_percentile) }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Oprettelsesdato -->
+                                <div class="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4 mt-auto">
+                                    <Calendar class="h-3 w-3" />
+                                    <span>
+                                        Oprettet {{ new Date(report.created_at).toLocaleDateString('da-DK') }}
+                                    </span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    <!-- Draft Reports (not clickable) -->
                     <Card
-                        class="hover:shadow-md transition-shadow flex flex-col cursor-pointer"
+                        v-else
+                        class="flex flex-col opacity-75"
                     >
                         <CardHeader>
                             <div class="flex items-start justify-between">
@@ -107,6 +212,9 @@ const formatCurrency = (value: number | null): string => {
                                         {{ report.job_title || 'Ukendt jobtitel' }}
                                     </CardTitle>
                                 </div>
+                                <Badge variant="outline" class="text-muted-foreground bg-muted">
+                                    Kladde
+                                </Badge>
                             </div>
                         </CardHeader>
                         <CardContent class="flex flex-col flex-1 space-y-4">
@@ -134,8 +242,8 @@ const formatCurrency = (value: number | null): string => {
                                 </Badge>
                             </div>
 
-                            <!-- Lønstatistikker -->
-                            <div class="space-y-2 border-t pt-4">
+                            <!-- Lønstatistikker (skjules hvis ikke tilgængelig) -->
+                            <div v-if="report.median" class="space-y-2 border-t pt-4">
                                 <div class="flex items-center justify-between text-sm">
                                     <span class="text-muted-foreground">Median løn:</span>
                                     <span class="font-semibold text-foreground">
@@ -165,9 +273,16 @@ const formatCurrency = (value: number | null): string => {
                             </div>
                         </CardContent>
                     </Card>
-                </Link>
+                </template>
             </div>
         </div>
     </AppLayout>
+
+    <!-- Success Toast Alert -->
+    <ToastSuccessAlert 
+        :show="showSuccessAlert"
+        message="Vi kontakter dig når rapporten er klar. Tak for hjælpen med at gøre vores database endnu bedre!"
+        @dismiss="dismissSuccessAlert"
+    />
 </template>
 

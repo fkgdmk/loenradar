@@ -2,11 +2,9 @@ import { ref, computed, watch, reactive } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import type {
     ReportFormProps,
-    ReportData,
     UploadedDocument,
     Step1Errors,
     Step3Errors,
-    ReportFormEndpoints,
 } from '@/types/report';
 
 export type EndpointResolver = string | ((reportId: number | string | null) => string);
@@ -18,6 +16,10 @@ export interface ReportFormEndpointsConfig {
     competencies: EndpointResolver;
     /** Step 3: Payslip upload */
     payslip: EndpointResolver;
+    /** Analyze anonymized payslip image */
+    analyze: EndpointResolver;
+    /** Delete payslip document */
+    deletePayslip?: EndpointResolver;
     /** Final submit */
     submit: EndpointResolver;
     /** HTTP method for jobDetails - 'post' for new reports, 'patch' for updates */
@@ -100,6 +102,9 @@ export function useReportForm(options: UseReportFormOptions) {
     const step3Errors = reactive<Step3Errors>({
         document: '',
     });
+    
+    // General error messages (for alerts)
+    const errorMessages = ref<string[]>([]);
 
     // Normalize gender on init
     const initialGender = props.report?.gender && props.report.gender.trim() !== '' 
@@ -272,13 +277,51 @@ export function useReportForm(options: UseReportFormOptions) {
         }
     };
 
-    const handleAnonymizedImage = (anonymizedFile: File) => {
-        showAnonymizer.value = false;
-        fileToAnonymize.value = null;
-        setUploadedFile(anonymizedFile);
-        
-        if (fileInputRef.value) {
-            fileInputRef.value.value = '';
+    const handleAnonymizedImage = async (anonymizedFile: File) => {
+        if (!reportId.value || reportId.value === 'guest') {
+            console.error('Ingen report_id fundet');
+            return;
+        }
+
+        // If analyze endpoint is configured, upload immediately
+        if (endpoints.analyze) {
+            const analyzeUrl = resolveEndpoint(endpoints.analyze, reportId.value);
+            const analyzeForm = useForm({
+                document: anonymizedFile,
+            });
+
+            analyzeForm.post(analyzeUrl, {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    showAnonymizer.value = false;
+                    fileToAnonymize.value = null;
+                    setUploadedFile(anonymizedFile);
+                    
+                    if (fileInputRef.value) {
+                        fileInputRef.value.value = '';
+                    }
+                },
+                onError: (errors: Record<string, string>) => {
+                    console.error('Fejl ved upload af anonymiseret lønseddel:', errors);
+                    setStep3Errors(errors);
+                    
+                    // Add error messages to errorMessages array for AlertError component
+                    const errorMessage = errors.error || errors.document || Object.values(errors).find(msg => msg);
+                    if (errorMessage) {
+                        errorMessages.value = [errorMessage];
+                    }
+                },
+            });
+        } else {
+            // Fallback to old behavior if no analyze endpoint
+            showAnonymizer.value = false;
+            fileToAnonymize.value = null;
+            setUploadedFile(anonymizedFile);
+            
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
         }
     };
 
@@ -292,11 +335,33 @@ export function useReportForm(options: UseReportFormOptions) {
     };
 
     const removeFile = () => {
-        uploadedFile.value = null;
-        uploadedFilePreview.value = null;
-        form.document = null;
-        if (fileInputRef.value) {
-            fileInputRef.value.value = '';
+        // If there's a persisted document, delete it from server
+        if (persistedDocument.value && reportId.value && reportId.value !== 'guest' && endpoints.deletePayslip) {
+            const deleteUrl = resolveEndpoint(endpoints.deletePayslip, reportId.value);
+            router.delete(deleteUrl, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    uploadedFile.value = null;
+                    uploadedFilePreview.value = null;
+                    persistedDocument.value = null;
+                    form.document = null;
+                    if (fileInputRef.value) {
+                        fileInputRef.value.value = '';
+                    }
+                },
+                onError: (errors: any) => {
+                    console.error('Fejl ved sletning af lønseddel:', errors);
+                },
+            });
+        } else {
+            // Just remove from local state
+            uploadedFile.value = null;
+            uploadedFilePreview.value = null;
+            persistedDocument.value = null;
+            form.document = null;
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
         }
     };
 
@@ -349,11 +414,14 @@ export function useReportForm(options: UseReportFormOptions) {
 
     const clearStep3Errors = () => {
         step3Errors.document = '';
+        errorMessages.value = [];
     };
 
     const setStep3Errors = (errors: Record<string, string>) => {
         clearStep3Errors();
         if (errors.document) step3Errors.document = errors.document;
+        // Also handle generic 'error' field
+        if (errors.error && !errors.document) step3Errors.document = errors.error;
     };
 
     // Navigation and submission
@@ -640,6 +708,7 @@ export function useReportForm(options: UseReportFormOptions) {
         // Errors
         step1Errors,
         step3Errors,
+        errorMessages,
         payslipWarning,
         showPayslipWarningModal,
         

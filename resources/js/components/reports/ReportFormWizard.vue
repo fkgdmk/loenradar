@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Combobox } from '@/components/ui/combobox';
-import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import ToastAlertError from '@/components/ToastAlertError.vue';
 import InputError from '@/components/InputError.vue';
 import PayslipAnonymizer from '@/components/PayslipAnonymizer.vue';
 import { login } from '@/routes';
@@ -22,7 +23,6 @@ import {
     Sparkles,
     Pencil,
     LogIn,
-    Mail,
     Image,
     Rocket,
 } from 'lucide-vue-next';
@@ -42,9 +42,6 @@ const props = withDefaults(defineProps<Props>(), {
     submitButtonText: 'Generer Rapport',
     hideDocumentUploadAfterStep1: false,
 });
-
-// Local state for contact email
-const contactEmail = ref('');
 
 // Drag and drop state
 const isDragging = ref(false);
@@ -420,6 +417,9 @@ const handleSubmit = () => {
                         </div>
                     </div>
 
+                    <!-- Error Alert -->
+                    <ToastAlertError v-if="rf.errorMessages.value.length > 0" :errors="rf.errorMessages.value" title="Fejl ved upload af lønseddel" />
+
                     <!-- File Upload Section -->
                     <div>
                         <div v-if="rf.uploadedFile.value" class="mt-2">
@@ -470,21 +470,32 @@ const handleSubmit = () => {
                             </div>
                         </div>
                         <div v-else-if="rf.persistedDocument.value" class="mt-2">
-                            <div class="flex items-center gap-4 rounded-lg border p-4">
-                                <div v-if="rf.persistedDocument.value.preview_url" class="h-20 w-20 overflow-hidden rounded">
-                                    <img :src="rf.persistedDocument.value.preview_url" alt="Preview" class="h-full w-full object-cover" />
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg border p-4">
+                                <div class="flex items-center gap-4 flex-1 min-w-0">
+                                    <div v-if="rf.persistedDocument.value.preview_url" class="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded flex-shrink-0">
+                                        <img :src="rf.persistedDocument.value.preview_url" alt="Preview" class="h-full w-full object-cover" />
+                                    </div>
+                                    <FileText v-else class="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground flex-shrink-0" />
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-medium truncate">{{ rf.persistedDocument.value.name }}</p>
+                                        <p class="text-sm text-muted-foreground">
+                                            {{ rf.formatFileSize(rf.persistedDocument.value.size) }}
+                                        </p>
+                                    </div>
                                 </div>
-                                <FileText v-else class="h-12 w-12 text-muted-foreground" />
-                                <div class="flex-1">
-                                    <p class="font-medium">{{ rf.persistedDocument.value.name }}</p>
-                                    <p class="text-sm text-muted-foreground">
-                                        {{ rf.formatFileSize(rf.persistedDocument.value.size) }}
-                                    </p>
+                                <div class="flex items-center gap-2 sm:gap-1 self-end sm:self-center">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        @click="rf.removeFile"
+                                        title="Fjern fil"
+                                    >
+                                        <X class="h-4 w-4 sm:mr-0 mr-1" />
+                                        <span class="sm:hidden">Fjern</span>
+                                    </Button>
                                 </div>
                             </div>
-                            <p class="mt-2 text-xs text-muted-foreground">
-                                Din anonymiserede lønseddel er gemt og vil blive brugt i rapporten.
-                            </p>
                         </div>
                         <div v-else class="mt-2">
                             <input
@@ -666,7 +677,7 @@ const handleSubmit = () => {
                 <!-- Action Button -->
                 <div class="w-full max-w-sm space-y-3">
                     <Link 
-                        :href="login(isInsufficientData ? { notice: 'Opret en konto eller log ind, så vi kan kontakte dig når din rapport er klar' } : {})" 
+                        :href="login()" 
                         class="inline-flex w-full items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
                     >
                         <LogIn class="mr-2 h-4 w-4" />

@@ -20,6 +20,8 @@ Route::post('/reports/guest/job-details', [App\Http\Controllers\ReportsControlle
 Route::patch('/reports/guest/{report}/job-details', [App\Http\Controllers\ReportsController::class, 'updateGuestJobDetails'])->name('reports.updateGuestJobDetails');
 Route::patch('/reports/guest/competencies', [App\Http\Controllers\ReportsController::class, 'updateGuestCompetencies'])->name('reports.updateGuestCompetencies');
 Route::post('/reports/guest/{report}/payslip', [App\Http\Controllers\ReportsController::class, 'storeGuestPayslip'])->name('reports.storeGuestPayslip');
+Route::post('/reports/guest/{report}/analyze', [App\Http\Controllers\ReportsController::class, 'analyzePayslip'])->name('reports.analyzeGuestPayslip');
+Route::delete('/reports/guest/{report}/payslip', [App\Http\Controllers\ReportsController::class, 'deletePayslip'])->name('reports.deleteGuestPayslip');
 Route::post('/reports/contact-email', [App\Http\Controllers\ReportsController::class, 'storeContactEmail'])->name('reports.storeContactEmail');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -34,6 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/reports/{report}/job-details', [App\Http\Controllers\ReportsController::class, 'updateJobDetails'])->name('reports.updateJobDetails');
     Route::patch('/reports/{report}/competencies', [App\Http\Controllers\ReportsController::class, 'updateCompetencies'])->name('reports.updateCompetencies');
     Route::post('/reports/{report}/payslip', [App\Http\Controllers\ReportsController::class, 'storePayslip'])->name('reports.storePayslip');
+    Route::post('/reports/{report}/analyze', [App\Http\Controllers\ReportsController::class, 'analyzePayslip'])->name('reports.analyzePayslip');
+    Route::delete('/reports/{report}/payslip', [App\Http\Controllers\ReportsController::class, 'deletePayslip'])->name('reports.deletePayslip');
     Route::get('/reports/{report}', [App\Http\Controllers\ReportsController::class, 'show'])->name('reports.show');
     
     // Payslip review routes

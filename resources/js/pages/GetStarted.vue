@@ -14,29 +14,43 @@ const page = usePage();
 const isAuthenticated = computed(() => !!page.props.auth?.user);
 const showAuthModal = ref(false);
 
-// Initialize report form composable with guest endpoints
-const reportForm = useReportForm({
-    props,
-    endpoints: {
-        // Step 1: Job details - Use PATCH for existing reports, POST for new
-        jobDetails: (reportId) => {
-            if (reportId && reportId !== 'guest') {
-                return `/reports/guest/${reportId}/job-details`;
-            }
-            return '/reports/guest/job-details';
+    // Initialize report form composable with guest endpoints
+    const reportForm = useReportForm({
+        props,
+        endpoints: {
+            // Step 1: Job details - Use PATCH for existing reports, POST for new
+            jobDetails: (reportId) => {
+                if (reportId && reportId !== 'guest') {
+                    return `/reports/guest/${reportId}/job-details`;
+                }
+                return '/reports/guest/job-details';
+            },
+            // Step 2: Competencies
+            competencies: '/reports/guest/competencies',
+            // Step 3: Payslip upload
+            payslip: (reportId) => {
+                if (reportId && reportId !== 'guest') {
+                    return `/reports/guest/${reportId}/payslip`;
+                }
+                return '/reports/guest/payslip';
+            },
+            // Analyze anonymized payslip
+            analyze: (reportId) => {
+                if (reportId && reportId !== 'guest') {
+                    return `/reports/guest/${reportId}/analyze`;
+                }
+                return null; // Will not be called if no reportId
+            },
+            // Delete payslip document
+            deletePayslip: (reportId) => {
+                if (reportId && reportId !== 'guest') {
+                    return `/reports/guest/${reportId}/payslip`;
+                }
+                return null; // Will not be called if no reportId
+            },
+            submit: '/reports/guest/finalize',
         },
-        // Step 2: Competencies
-        competencies: '/reports/guest/competencies',
-        // Step 3: Payslip upload
-        payslip: (reportId) => {
-            if (reportId && reportId !== 'guest') {
-                return `/reports/guest/${reportId}/payslip`;
-            }
-            return '/reports/guest/payslip';
-        },
-        submit: '/reports/guest/finalize',
-    },
-});
+    });
 
 // Handle submit - show auth modal for guests
 const handleSubmit = () => {
@@ -55,10 +69,10 @@ const handleAuthSuccess = () => {
 };
 
 // Auto-finalize guest report after login
+// Only finalize if report is complete (has all required data AND user explicitly submitted)
+// Don't auto-finalize just because a payslip was uploaded
 onMounted(() => {
-    if (isAuthenticated.value && reportForm.reportId.value && reportForm.reportId.value !== 'guest' && props.report?.step === 3) {
-        reportForm.submitReport();
-    }
+    // Don't auto-finalize - let user explicitly submit
 });
 
 // Dynamic submit button text

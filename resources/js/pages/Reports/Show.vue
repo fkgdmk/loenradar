@@ -3,8 +3,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, TrendingUp, ExternalLink, Info, CheckCircle2, X } from 'lucide-vue-next';
-import { computed, ref, onMounted } from 'vue';
+import { ArrowLeft, TrendingUp, ExternalLink, Info } from 'lucide-vue-next';
+import { computed, ref, onMounted, watch } from 'vue';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import ToastAlertError from '@/components/ToastAlertError.vue';
+import ToastSuccessAlert from '@/components/ToastSuccessAlert.vue';
 
 interface ProsaArea {
     id: number;
@@ -122,21 +124,35 @@ const props = defineProps<{
 const page = usePage();
 const showSuccessAlert = ref(false);
 const successMessage = ref('');
+const errorMessages = ref<string[]>([]);
 
-onMounted(() => {
-    const flash = page.props.flash as { success?: string } | undefined;
+const checkFlashMessages = () => {
+    const flash = page.props.flash as { success?: string; error?: string | string[] } | undefined;
     if (flash?.success) {
         successMessage.value = 'Din rapport blev genereret. Tak for hjælpen med at gøre vores database endnu bedre!';
         showSuccessAlert.value = true;
-        
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            showSuccessAlert.value = false;
-        }, 5000);
     }
+    
+    if (flash?.error) {
+        errorMessages.value = Array.isArray(flash.error) ? flash.error : [flash.error];
+    }
+};
+
+onMounted(() => {
+    // Scroll to top when component mounts
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Check flash messages after a small delay to ensure props are loaded
+    setTimeout(() => {
+        checkFlashMessages();
+    }, 100);
 });
 
-const dismissAlert = () => {
+// Watch for changes in flash messages (e.g., after redirect)
+watch(() => page.props.flash, () => {
+    checkFlashMessages();
+}, { deep: true });
+
+const dismissSuccessAlert = () => {
     showSuccessAlert.value = false;
 };
 
@@ -367,27 +383,27 @@ const formattedConclusion = computed(() => {
                         <div class="space-y-3">
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-muted-foreground">Jobtitel</span>
-                                <span class="font-medium text-right">{{ report.job_title.name_en }}</span>
+                                <span class="sm:text-sm font-medium text-right">{{ report.job_title.name_en }}</span>
                             </div>
                             
                             <div v-if="report.area_of_responsibility" class="flex justify-between items-center">
                                 <span class="text-sm text-muted-foreground">Område</span>
-                                <span class="font-medium text-right">{{ report.area_of_responsibility.name }}</span>
+                                <span class="sm:text-sm font-medium text-right">{{ report.area_of_responsibility.name }}</span>
                             </div>
 
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-muted-foreground">Erfaring</span>
-                                <span class="font-medium">{{ report.experience }} år</span>
+                                <span class="sm:text-sm font-medium">{{ report.experience }} år</span>
                             </div>
 
                             <div class="flex justify-between items-center">
                                 <span class="text-sm text-muted-foreground">Region</span>
-                                <span class="font-medium">{{ report.region.name }}</span>
+                                <span class="sm:text-sm font-medium">{{ report.region.name }}</span>
                             </div>
 
                             <div v-if="responsibilityLevel" class="flex justify-between items-center">
                                 <span class="text-sm text-muted-foreground">Rolle</span>
-                                <span class="font-medium text-right">{{ responsibilityLevel.name }}</span>
+                                <span class="sm:text-sm font-medium text-right">{{ responsibilityLevel.name }}</span>
                             </div>
 
                             <div v-if="report.filters?.team_size && report.filters.team_size > 0" class="flex justify-between items-center">
@@ -640,31 +656,16 @@ const formattedConclusion = computed(() => {
     </AppLayout>
 
     <!-- Success Toast Alert -->
-    <Teleport to="body">
-        <Transition
-            enter-active-class="transition ease-out duration-300"
-            enter-from-class="opacity-0 translate-y-4"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-200"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-4"
-        >
-            <div 
-                v-if="showSuccessAlert" 
-                class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4"
-            >
-                <Alert variant="default" class="shadow-lg border-gray-500/80">
-                    <CheckCircle2 class="h-4 w-4" />
-                    <AlertTitle class="font-semibold">Sådan!</AlertTitle>
-                    <AlertDescription>{{ successMessage }}</AlertDescription>
-                    <button 
-                        @click="dismissAlert" 
-                        class="absolute top-3 right-3 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                    >
-                        <X class="h-4 w-4" />
-                    </button>
-                </Alert>
-            </div>
-        </Transition>
-    </Teleport>
+    <ToastSuccessAlert 
+        :show="showSuccessAlert"
+        :message="successMessage"
+        @dismiss="dismissSuccessAlert"
+    />
+
+    <!-- Error Toast Alert -->
+    <ToastAlertError 
+        :errors="errorMessages" 
+        title="Noget gik galt"
+        @dismiss="errorMessages = []"
+    />
 </template>

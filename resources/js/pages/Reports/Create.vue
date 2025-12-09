@@ -54,6 +54,20 @@ const reportForm = useReportForm({
             }
             return '/reports/guest/payslip';
         },
+        // Analyze anonymized payslip
+        analyze: (reportId) => {
+            if (reportId && reportId !== 'guest') {
+                return `/reports/${reportId}/analyze`;
+            }
+            return null; // Will not be called if no reportId
+        },
+        // Delete payslip document
+        deletePayslip: (reportId) => {
+            if (reportId && reportId !== 'guest') {
+                return `/reports/${reportId}/payslip`;
+            }
+            return null; // Will not be called if no reportId
+        },
         submit: '/reports',
     },
 });
@@ -83,21 +97,10 @@ const handleSubmit = () => {
 };
 
 // Auto-finalize guest report after login
+// Only finalize if report is complete (has all required data AND user explicitly submitted)
+// Don't auto-finalize just because a payslip was uploaded
 onMounted(() => {
-    if (isAuthenticated.value && reportForm.reportId.value && reportForm.reportId.value !== 'guest' && props.report?.step === 3) {
-        // Check if this is a guest report (no user_id yet) that needs finalization
-        const finalizeForm = useForm({
-            report_id: reportForm.reportId.value,
-        });
-        finalizeForm.post('/reports/guest/finalize', {
-            onSuccess: () => {
-                // Redirect happens automatically
-            },
-            onError: (errors: any) => {
-                console.error('Fejl ved automatisk færdiggørelse:', errors);
-            },
-        });
-    }
+    // Don't auto-finalize - let user explicitly submit
 });
 </script>
 

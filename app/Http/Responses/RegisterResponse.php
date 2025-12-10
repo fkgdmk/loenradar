@@ -7,6 +7,7 @@ use App\Services\FindMatchingPayslips;
 use App\Services\FindMatchingJobPostings;
 use App\Services\ReportConclusionGenerator;
 use App\Enums\PayslipMatchType;
+use App\Enums\ReportStatus;
 use App\Models\JobPosting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +31,7 @@ class RegisterResponse implements RegisterResponseContract
         if ($guestToken) {
             // Find the draft report by guest token
             $report = Report::where('guest_token', $guestToken)
-                ->where('status', 'draft')
+                ->where('status', ReportStatus::DRAFT->value)
                 ->with('uploadedPayslip')
                 ->first();
             
@@ -66,9 +67,6 @@ class RegisterResponse implements RegisterResponseContract
                             $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
 
                             // Check if we should override INSUFFICIENT_DATA
-                            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $jobPostingCount >= 3) {
-                                $matchType = PayslipMatchType::LIMITED_DATA;
-                            }
 
                             $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
                             $count = $salaries->count();
@@ -87,14 +85,14 @@ class RegisterResponse implements RegisterResponseContract
                             }
 
                             // Determine status
-                            $status = 'completed';
+                            $status = ReportStatus::COMPLETED;
                             if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
-                                $status = 'draft';
+                                $status = ReportStatus::AWAITING_DATA;
                             }
 
                             // Mark report as completed (or draft) with statistics and match data
                             $report->update([
-                                'status' => $status,
+                                'status' => $status->value,
                                 'lower_percentile' => $lower,
                                 'median' => $median,
                                 'upper_percentile' => $upper,
@@ -135,7 +133,7 @@ class RegisterResponse implements RegisterResponseContract
                     // Use Inertia::location() to preserve flash messages
                     $request->session()->flash('success', 'insufficient_data');
                     return Inertia::location(route('reports.index'));
-                } elseif ($report->status === 'completed' && $report->payslip_match && $report->payslip_match !== 'insufficient_data') {
+                } elseif ($report->status === ReportStatus::COMPLETED && $report->payslip_match && $report->payslip_match !== 'insufficient_data') {
                     // Use Inertia::location() to preserve flash messages
                     $request->session()->flash('success', 'Rapport oprettet succesfuldt');
                     return Inertia::location(route('reports.show', $report->id));

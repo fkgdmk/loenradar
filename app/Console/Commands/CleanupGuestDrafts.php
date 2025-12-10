@@ -35,7 +35,7 @@ class CleanupGuestDrafts extends Command
 
         // Find old guest drafts (no user_id, status draft, older than cutoff)
         $drafts = Report::whereNull('user_id')
-            ->where('status', 'draft')
+            ->where('status', ReportStatus::DRAFT)
             ->where('created_at', '<', $cutoffDate)
             ->get();
 

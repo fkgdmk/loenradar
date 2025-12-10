@@ -9,6 +9,7 @@ import { dashboard } from '@/routes';
 import { MapPin, TrendingUp, Calendar, Plus, FileText } from 'lucide-vue-next';
 import ToastSuccessAlert from '@/components/ToastSuccessAlert.vue';
 import { ref, onMounted, watch } from 'vue';
+import { formatTimeAgo } from '@/lib/utils';
 
 interface Report {
     id: number;
@@ -21,7 +22,7 @@ interface Report {
     median: number | null;
     upper_percentile: number | null;
     conclusion: string | null;
-    status: 'completed' | 'draft';
+    status: 'completed' | 'draft' | 'awaiting_data';
     created_at: string;
 }
 
@@ -126,12 +127,12 @@ const formatCurrency = (value: number | null): string => {
                 <template v-for="report in props.reports" :key="report.id">
                     <!-- Completed Reports (clickable) -->
                     <Link
-                        v-if="report.status !== 'draft'"
+                        v-if="report.status === 'completed'"
                         :href="`/reports/${report.id}`"
-                        class="block"
+                        class="block h-full"
                     >
                         <Card
-                            class="hover:shadow-md transition-shadow flex flex-col cursor-pointer"
+                            class="hover:shadow-md transition-shadow flex flex-col cursor-pointer h-full"
                         >
                             <CardHeader>
                                 <div class="flex items-start justify-between">
@@ -140,6 +141,9 @@ const formatCurrency = (value: number | null): string => {
                                             {{ report.job_title || 'Ukendt jobtitel' }}
                                         </CardTitle>
                                     </div>
+                                    <Badge class="bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20">
+                                        Færdig
+                                    </Badge>
                                 </div>
                             </CardHeader>
                             <CardContent class="flex flex-col flex-1 space-y-4">
@@ -193,88 +197,143 @@ const formatCurrency = (value: number | null): string => {
                                 <div class="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4 mt-auto">
                                     <Calendar class="h-3 w-3" />
                                     <span>
-                                        Oprettet {{ new Date(report.created_at).toLocaleDateString('da-DK') }}
+                                        Oprettet {{ formatTimeAgo(report.created_at) }}
                                     </span>
                                 </div>
                             </CardContent>
                         </Card>
                     </Link>
 
-                    <!-- Draft Reports (not clickable) -->
-                    <Card
-                        v-else
-                        class="flex flex-col opacity-75"
+                    <!-- Awaiting Data Reports (not clickable) -->
+                    <div
+                        v-else-if="report.status === 'awaiting_data'"
+                        class="block h-full"
                     >
-                        <CardHeader>
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <CardTitle class="text-lg mb-2">
-                                        {{ report.job_title || 'Ukendt jobtitel' }}
-                                    </CardTitle>
-                                </div>
-                                <Badge variant="outline" class="text-muted-foreground bg-muted">
-                                    Kladde
-                                </Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent class="flex flex-col flex-1 space-y-4">
-                            <!-- Region og Erfaring -->
-                            <div class="flex flex-wrap gap-2">
-                                <Badge
-                                    v-if="report.region"
-                                    variant="secondary"
-                                    class="flex items-center gap-1"
-                                >
-                                    <MapPin class="h-3 w-3" />
-                                    {{ report.region }}
-                                </Badge>
-                                <Badge
-                                    v-if="report.experience !== null"
-                                    variant="secondary"
-                                >
-                                    {{ report.experience }} års erfaring
-                                </Badge>
-                                <Badge
-                                    v-if="report.area_of_responsibility"
-                                    variant="secondary"
-                                >
-                                    {{ report.area_of_responsibility }}
-                                </Badge>
-                            </div>
-
-                            <!-- Lønstatistikker (skjules hvis ikke tilgængelig) -->
-                            <div class="space-y-2 border-t pt-4">
-                                <div v-if="report.status === 'completed' && report.median" >
-                                    <div class="flex items-center justify-between text-sm">
-                                        <span class="text-muted-foreground">Median løn:</span>
-                                        <span class="font-semibold text-foreground">
-                                            {{ formatCurrency(report.median) }}
-                                        </span>
+                        <Card
+                            class="flex flex-col h-full opacity-65"
+                        >
+                            <CardHeader>
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <CardTitle class="text-lg mb-2">
+                                            {{ report.job_title || 'Ukendt jobtitel' }}
+                                        </CardTitle>
                                     </div>
-                                    <div
-                                        v-if="report.lower_percentile || report.upper_percentile"
-                                        class="flex items-center gap-2 text-xs text-muted-foreground"
+                                    <Badge variant="outline" class="text-muted-foreground bg-muted">
+                                        Afventer
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent class="flex flex-col flex-1 space-y-4">
+                                <!-- Region og Erfaring -->
+                                <div class="flex flex-wrap gap-2">
+                                    <Badge
+                                        v-if="report.region"
+                                        variant="secondary"
+                                        class="flex items-center gap-1"
                                     >
-                                        <span v-if="report.lower_percentile">
-                                            {{ formatCurrency(report.lower_percentile) }}
-                                        </span>
-                                        <TrendingUp class="h-3 w-3" />
-                                        <span v-if="report.upper_percentile">
-                                            {{ formatCurrency(report.upper_percentile) }}
+                                        <MapPin class="h-3 w-3" />
+                                        {{ report.region }}
+                                    </Badge>
+                                    <Badge
+                                        v-if="report.experience !== null"
+                                        variant="secondary"
+                                    >
+                                        {{ report.experience }} års erfaring
+                                    </Badge>
+                                    <Badge
+                                        v-if="report.area_of_responsibility"
+                                        variant="secondary"
+                                    >
+                                        {{ report.area_of_responsibility }}
+                                    </Badge>
+                                </div>
+
+                                <!-- Lønstatistikker -->
+                                <div class="space-y-2 border-t pt-4">
+                                    <div class="flex items-center justify-between text-sm"> 
+                                        <span class="text-muted-foreground italic">
+                                            Mangler data til at bygge rapporten. Vi kontakter dig når den er klar.
                                         </span>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Oprettelsesdato -->
-                            <div class="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4 mt-auto">
-                                <Calendar class="h-3 w-3" />
-                                <span>
-                                    Oprettet {{ new Date(report.created_at).toLocaleDateString('da-DK') }}
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <!-- Oprettelsesdato -->
+                                <div class="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4 mt-auto">
+                                    <Calendar class="h-3 w-3" />
+                                    <span>
+                                        Oprettet {{ formatTimeAgo(report.created_at) }}
+                                    </span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <!-- Draft Reports (clickable) -->
+                    <Link
+                        v-else
+                        :href="`/reports/create?report_id=${report.id}`"
+                        class="block h-full"
+                    >
+                        <Card
+                            class="flex flex-col h-full"
+                        >
+                            <CardHeader>
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <CardTitle class="text-lg mb-2">
+                                            {{ report.job_title || 'Ukendt jobtitel' }}
+                                        </CardTitle>
+                                    </div>
+                                    <Badge variant="outline" class="text-muted-foreground bg-muted">
+                                        Kladde
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent class="flex flex-col flex-1 space-y-4">
+                                <!-- Region og Erfaring -->
+                                <div class="flex flex-wrap gap-2">
+                                    <Badge
+                                        v-if="report.region"
+                                        variant="secondary"
+                                        class="flex items-center gap-1"
+                                    >
+                                        <MapPin class="h-3 w-3" />
+                                        {{ report.region }}
+                                    </Badge>
+                                    <Badge
+                                        v-if="report.experience !== null"
+                                        variant="secondary"
+                                    >
+                                        {{ report.experience }} års erfaring
+                                    </Badge>
+                                    <Badge
+                                        v-if="report.area_of_responsibility"
+                                        variant="secondary"
+                                    >
+                                        {{ report.area_of_responsibility }}
+                                    </Badge>
+                                </div>
+
+                                <!-- Lønstatistikker -->
+                                <div class="space-y-2 border-t pt-4">
+                                    <div class="flex items-center justify-between text-sm"> 
+                                        <span class="text-muted-foreground italic">
+                                            Du mangler at udfylde alle felter.
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Oprettelsesdato -->
+                                <div class="flex items-center gap-2 text-xs text-muted-foreground border-t pt-4 mt-auto">
+                                    <Calendar class="h-3 w-3" />
+                                    <span>
+                                        Oprettet {{ formatTimeAgo(report.created_at) }}
+                                    </span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link> 
                 </template>
             </div>
         </div>

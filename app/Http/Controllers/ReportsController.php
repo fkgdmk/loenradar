@@ -16,12 +16,11 @@ use App\Services\FindMatchingPayslips;
 use App\Services\ReportConclusionGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Response;
+use App\Enums\ReportStatus;
 
 class ReportsController extends Controller
 {
@@ -31,7 +30,6 @@ class ReportsController extends Controller
     public function index(Request $request): Response
     {
         $reports = Report::where('user_id', $request->user()->id)
-            ->whereIn('status', ['completed', 'draft'])
             ->with(['jobTitle', 'region', 'areaOfResponsibility'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -60,7 +58,7 @@ class ReportsController extends Controller
     /**
      * Show the form for creating a new report (authenticated users only).
      */
-    public function create(Request $request): Response
+    public function create(Request $request)
     {
         $formData = $this->getReportFormData();
 
@@ -72,7 +70,6 @@ class ReportsController extends Controller
             
             // Find report - either by user_id (for existing reports) or guest_token (for guest reports being finalized)
             $query = Report::where('id', $reportId)
-                ->where('status', 'draft')
                 ->with(['uploadedPayslip', 'jobTitle', 'region', 'areaOfResponsibility']);
             
             if ($guestToken) {
@@ -87,6 +84,10 @@ class ReportsController extends Controller
             }
             
             $report = $query->first();
+
+            if ($report->status === ReportStatus::COMPLETED) {
+                return redirect()->route('reports.show', $report->id);
+            }
 
             if ($report) {
                 $reportData = $this->formatReportData($report);
@@ -114,7 +115,7 @@ class ReportsController extends Controller
             $guestToken = $request->session()->get('guest_report_token');
             
             $query = Report::where('id', $reportId)
-                ->where('status', 'draft')
+                ->where('status', ReportStatus::DRAFT)
                 ->with(['uploadedPayslip', 'jobTitle', 'region', 'areaOfResponsibility']);
             
             // If user is authenticated, check user_id
@@ -301,7 +302,7 @@ class ReportsController extends Controller
                 'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
                 'experience' => $validated['experience'],
                 'region_id' => $validated['region_id'],
-                'status' => 'draft',
+                'status' => ReportStatus::DRAFT,
                 'filters' => [
                     'gender' => $gender,
                 ],
@@ -325,7 +326,7 @@ class ReportsController extends Controller
     public function storePayslip(Request $request, Report $report)
     {
         // Verify ownership
-        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
+        if ($report->user_id !== $request->user()->id || $report->status !== ReportStatus::DRAFT) {
             return back()->withErrors(['error' => 'Adgang nægtet.']);
         }
 
@@ -382,10 +383,6 @@ class ReportsController extends Controller
             if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
                  $findMatchingJobPostings = new FindMatchingJobPostings();
                  $jobCount = $findMatchingJobPostings->findAndAttach($report);
-                 
-                 if ($jobCount >= 3) {
-                     $matchType = PayslipMatchType::LIMITED_DATA;
-                 }
             }
 
             // Update report with match status and metadata (important for redirect logic after login)
@@ -451,7 +448,7 @@ class ReportsController extends Controller
                 'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
                 'experience' => $validated['experience'],
                 'region_id' => $validated['region_id'],
-                'status' => 'draft',
+                'status' => ReportStatus::DRAFT,
                 'filters' => [
                     'gender' => $gender,
                 ],
@@ -480,7 +477,7 @@ class ReportsController extends Controller
         $guestToken = $request->session()->get('guest_report_token');
         
         // Verify access to the report
-        if ($report->status !== 'draft') {
+        if ($report->status !== ReportStatus::DRAFT) {
             return back()->withErrors(['error' => 'Rapport kan ikke opdateres.']);
         }
         
@@ -547,10 +544,6 @@ class ReportsController extends Controller
             if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
                  $findMatchingJobPostings = new FindMatchingJobPostings();
                  $jobCount = $findMatchingJobPostings->findAndAttach($report);
-                 
-                 if ($jobCount >= 3) {
-                     $matchType = PayslipMatchType::LIMITED_DATA;
-                 }
             }
 
             // Update report with match status and metadata (important for redirect logic after login)
@@ -582,7 +575,7 @@ class ReportsController extends Controller
         $guestToken = $request->session()->get('guest_report_token');
         
         // Verify access to the report
-        if ($report->status !== 'draft') {
+        if ($report->status !== ReportStatus::DRAFT) {
             return back()->withErrors(['error' => 'Rapport kan ikke opdateres.']);
         }
         
@@ -676,7 +669,7 @@ class ReportsController extends Controller
         
         // Find the draft report
         $query = Report::where('id', $validated['report_id'])
-            ->where('status', 'draft');
+            ->where('status', ReportStatus::DRAFT);
         
         if ($request->user()) {
             $query->where(function ($q) use ($request, $guestToken) {
@@ -728,7 +721,7 @@ class ReportsController extends Controller
     public function updateCompetencies(Request $request, Report $report)
     {
         // Verify ownership
-        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
+        if ($report->user_id !== $request->user()->id || $report->status !== ReportStatus::DRAFT) {
             return back()->withErrors(['error' => 'Adgang nægtet.']);
         }
 
@@ -773,7 +766,7 @@ class ReportsController extends Controller
      */
     public function show(Request $request, Report $report)
     {
-        if ($report->status !== 'completed') {
+        if ($report->status !== ReportStatus::COMPLETED) {
             return Redirect::route('reports.index');
         }
 
@@ -820,7 +813,7 @@ class ReportsController extends Controller
             // Find eksisterende report
             $report = Report::where('id', $validated['report_id'])
                 ->where('user_id', $request->user()->id)
-                ->where('status', 'draft')
+                ->where('status', ReportStatus::DRAFT)
                 ->firstOrFail();
 
             // Opdater payslip med step 2 data
@@ -853,11 +846,6 @@ class ReportsController extends Controller
             $findMatchingJobPostings = new FindMatchingJobPostings();
             $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
 
-            // Check if we should override INSUFFICIENT_DATA
-            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $jobPostingCount >= 3) {
-                 $matchType = PayslipMatchType::LIMITED_DATA;
-            }
-
             $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
             $count = $salaries->count();
 
@@ -875,9 +863,9 @@ class ReportsController extends Controller
             }
 
             // Determine status
-            $status = 'completed';
+            $status = ReportStatus::COMPLETED;
             if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
-                $status = 'draft';
+                $status = ReportStatus::AWAITING_DATA;
             }
 
             $report->update([
@@ -905,7 +893,7 @@ class ReportsController extends Controller
 
             DB::commit();
 
-            if ($status === 'draft') {
+            if ($status === ReportStatus::AWAITING_DATA) {
                 return redirect()->route('reports.index')
                     ->with('success', 'insufficient_data');
             }
@@ -927,7 +915,7 @@ class ReportsController extends Controller
         $guestToken = $request->session()->get('guest_report_token');
         
         // Verify access to the report
-        if ($report->status !== 'draft') {
+        if ($report->status !== ReportStatus::DRAFT) {
             return back()->withErrors(['error' => 'Rapport kan ikke opdateres.']);
         }
         
@@ -984,11 +972,6 @@ class ReportsController extends Controller
         if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
             $findMatchingJobPostings = new FindMatchingJobPostings();
             $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
-            
-            if ($jobPostingCount >= 3) {
-                // If we have enough job postings, we consider it "limited data" instead of insufficient
-                $matchType = PayslipMatchType::LIMITED_DATA;
-            }
         }
         
         $report->update([

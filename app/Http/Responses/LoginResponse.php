@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
+use App\Enums\ReportStatus;
 
 class LoginResponse implements LoginResponseContract
 {
@@ -30,7 +31,7 @@ class LoginResponse implements LoginResponseContract
         if ($guestToken) {
             // Find the draft report by guest token
             $report = Report::where('guest_token', $guestToken)
-                ->where('status', 'draft')
+                ->where('status', ReportStatus::DRAFT)
                 ->with('uploadedPayslip')
                 ->first();
             
@@ -65,11 +66,6 @@ class LoginResponse implements LoginResponseContract
                             $findMatchingJobPostings = new FindMatchingJobPostings();
                             $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
 
-                            // Check if we should override INSUFFICIENT_DATA
-                            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $jobPostingCount >= 3) {
-                                $matchType = PayslipMatchType::LIMITED_DATA;
-                            }
-
                             $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
                             $count = $salaries->count();
 
@@ -87,9 +83,9 @@ class LoginResponse implements LoginResponseContract
                             }
 
                             // Determine status
-                            $status = 'completed';
+                            $status = ReportStatus::COMPLETED;
                             if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
-                                $status = 'draft';
+                                $status = ReportStatus::AWAITING_DATA;
                             }
 
                             // Mark report as completed (or draft) with statistics and match data

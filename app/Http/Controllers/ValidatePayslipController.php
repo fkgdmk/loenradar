@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use App\Enums\ReportStatus;
 
 class ValidatePayslipController extends Controller
 {
@@ -22,7 +23,7 @@ class ValidatePayslipController extends Controller
         $guestToken = $request->session()->get('guest_report_token');
         
         // Verify access to the report
-        if ($report->status !== 'draft') {
+        if ($report->status !== ReportStatus::DRAFT) {
             return back()->withErrors(['error' => 'Rapport kan ikke opdateres.']);
         }
         

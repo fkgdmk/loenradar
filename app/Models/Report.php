@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\PayslipMatchType;
+use App\Enums\ReportStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -51,6 +52,7 @@ class Report extends Model
         'filters' => 'array',
         'match_metadata' => 'array',
         'payslip_match' => PayslipMatchType::class,
+        'status' => ReportStatus::class,
     ];
 
     /**

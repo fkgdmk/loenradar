@@ -1242,16 +1242,26 @@ class ReportsController extends Controller
             }
         }
 
-        // Throttle: 5 uploads per minute
+        // Throttle: 3 uploads per minute
         $key = 'analyze-payslip:' . ($request->user()?->id ?? $request->ip());
         if (RateLimiter::tooManyAttempts($key, 3)) {
             $seconds = RateLimiter::availableIn($key);
             return back()->withErrors([
-                'error' => "For mange uploads. Prøv igen om {$seconds} sekunder."
+                'error' => "Du har uploadet for mange filer. Prøv igen om {$seconds} sekunder."
             ]);
         }
 
-        $validated = $request->validate([
+        // Throttle: 5 uploads per half hour
+        $keyHalfHour = 'analyze-payslip-halfhour:' . ($request->user()?->id ?? $request->ip());
+        if (RateLimiter::tooManyAttempts($keyHalfHour, 5)) {
+            $seconds = RateLimiter::availableIn($keyHalfHour);
+            $minutes = ceil($seconds / 60);
+            return back()->withErrors([
+                'error' => "Du har uploadet for mange filer. Prøv igen om {$minutes} minut(ter)."
+            ]);
+        }
+
+        $request->validate([
             'document' => 'required|file|mimes:png,jpg,jpeg|max:10240', // 10MB max
         ], [
             'document.required' => 'Upload venligst din lønseddel',
@@ -1259,8 +1269,6 @@ class ReportsController extends Controller
             'document.mimes' => 'Dokumentet skal være et billede (PNG eller JPG)',
             'document.max' => 'Dokumentet må maksimalt være 10MB',
         ]);
-
-        RateLimiter::hit($key, 60); // 60 seconds = 1 minute
 
         DB::beginTransaction();
         try {
@@ -1299,6 +1307,10 @@ class ReportsController extends Controller
                 ->toMediaCollection('documents');
 
             DB::commit();
+
+            // Register rate limiter hits only after successful upload
+            RateLimiter::hit($key, 60); // 60 seconds = 1 minute
+            RateLimiter::hit($keyHalfHour, 1800); // 1800 seconds = 30 minutes
 
             // Redirect to the same page (get-started or reports.create) with report_id to maintain state
             if ($request->user()) {

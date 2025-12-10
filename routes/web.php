@@ -10,9 +10,6 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
-Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
 
 // Guest-accessible report creation flow (no auth required)
 Route::get('/get-started', [App\Http\Controllers\ReportsController::class, 'getStarted'])->name('get-started');
@@ -22,12 +19,9 @@ Route::patch('/reports/guest/competencies', [App\Http\Controllers\ReportsControl
 Route::post('/reports/guest/{report}/payslip', [App\Http\Controllers\ReportsController::class, 'storeGuestPayslip'])->name('reports.storeGuestPayslip');
 Route::post('/reports/guest/{report}/analyze', App\Http\Controllers\ValidatePayslipController::class)->name('reports.analyzeGuestPayslip');
 Route::delete('/reports/guest/{report}/payslip', [App\Http\Controllers\ReportsController::class, 'deletePayslip'])->name('reports.deleteGuestPayslip');
-Route::post('/reports/contact-email', [App\Http\Controllers\ReportsController::class, 'storeContactEmail'])->name('reports.storeContactEmail');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    // Finalize guest report after login
-    Route::post('/reports/guest/finalize', [App\Http\Controllers\ReportsController::class, 'finalizeGuestReport'])->name('reports.finalizeGuestReport');
-    
+Route::middleware(['auth', 'verified'])->group(function () {    
+    Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     // Authenticated report routes
     Route::get('/reports', [App\Http\Controllers\ReportsController::class, 'index'])->name('reports.index');
     Route::get('/reports/create', [App\Http\Controllers\ReportsController::class, 'create'])->name('reports.create');

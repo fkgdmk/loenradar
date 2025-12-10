@@ -48,7 +48,6 @@ const showAuthModal = ref(false);
                 }
                 return null; // Will not be called if no reportId
             },
-            submit: '/reports/guest/finalize',
         },
     });
 
@@ -57,7 +56,7 @@ const handleSubmit = () => {
     if (!isAuthenticated.value) {
         showAuthModal.value = true;
         return;
-    }
+    } 
     
     reportForm.submitReport();
 };

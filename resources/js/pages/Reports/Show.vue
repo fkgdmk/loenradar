@@ -129,7 +129,7 @@ const errorMessages = ref<string[]>([]);
 const checkFlashMessages = () => {
     const flash = page.props.flash as { success?: string; error?: string | string[] } | undefined;
     if (flash?.success) {
-        successMessage.value = 'Din rapport blev genereret. Tak for hjælpen med at gøre vores database endnu bedre!';
+        successMessage.value = 'Din rapport blev genereret. Tak for at hjælpe med at gøre vores database endnu bedre!';
         showSuccessAlert.value = true;
     }
     

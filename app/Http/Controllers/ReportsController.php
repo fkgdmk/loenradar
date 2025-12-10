@@ -408,46 +408,6 @@ class ReportsController extends Controller
     }
 
     /**
-     * Store contact email for a report (when not enough payslips are available).
-     */
-    public function storeContactEmail(Request $request)
-    {
-        $validated = $request->validate([
-            'report_id' => 'required|exists:reports,id',
-            'contact_email' => 'required|email|max:255',
-        ], [
-            'contact_email.required' => 'Indtast venligst en email',
-            'contact_email.email' => 'Indtast venligst en gyldig email',
-        ]);
-
-        $guestToken = $request->session()->get('guest_report_token');
-        
-        // Find the report - allow both guest token and authenticated user access
-        $query = Report::where('id', $validated['report_id']);
-        
-        if ($request->user()) {
-            $query->where(function ($q) use ($request, $guestToken) {
-                $q->where('user_id', $request->user()->id)
-                  ->orWhere('guest_token', $guestToken);
-            });
-        } else {
-            $query->where('guest_token', $guestToken);
-        }
-        
-        $report = $query->first();
-
-        if (!$report) {
-            return back()->withErrors(['error' => 'Rapport ikke fundet.']);
-        }
-
-        $report->update([
-            'contact_email' => $validated['contact_email'],
-        ]);
-
-        return back();
-    }
-
-    /**
      * Store job details for guests (step 1) - creates a new draft report.
      */
     public function storeGuestJobDetails(Request $request)
@@ -763,195 +723,6 @@ class ReportsController extends Controller
     }
 
     /**
-     * Finalize guest report after authentication.
-     */
-    public function finalizeGuestReport(Request $request)
-    {
-        $validated = $request->validate([
-            'report_id' => 'required|exists:reports,id',
-        ]);
-
-        $guestToken = $request->session()->get('guest_report_token');
-        
-        // Find the draft report by guest_token
-        $report = Report::where('id', $validated['report_id'])
-            ->where('guest_token', $guestToken)
-            ->where('status', 'draft')
-            ->first();
-
-        if (!$report) {
-            return redirect()->route('get-started')->withErrors(['error' => 'Rapport ikke fundet.']);
-        }
-
-        // Check if step 2 is completed (responsibility_level_id in filters)
-        $filters = $report->filters ?? [];
-        if (!isset($filters['responsibility_level_id'])) {
-            return redirect()->route('get-started', ['report_id' => $report->id])
-                ->withErrors(['error' => 'Udfyld venligst alle trin før du fortsætter.']);
-        }
-
-        DB::beginTransaction();
-        try {
-            // Assign user to report and payslip
-            $report->update(['user_id' => $request->user()->id]);
-            
-            if ($report->uploadedPayslip) {
-                $report->uploadedPayslip->update([
-                    'uploader_id' => $request->user()->id,
-                    'source' => 'user_upload',
-                ]);
-            }
-
-            if ($report->payslip_match !== PayslipMatchType::INSUFFICIENT_DATA) {
-                // Calculate statistics
-                $findMatchingPayslips = new FindMatchingPayslips();
-                $result = $findMatchingPayslips->find($report);
-                $matchingPayslips = $result['payslips'];
-                $description = $result['description'];
-                $matchType = $result['match_type'];
-                $metadata = $result['metadata'];
-    
-                // Find and attach matching job postings
-                $findMatchingJobPostings = new FindMatchingJobPostings();
-                $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
-    
-                // Check if we should override INSUFFICIENT_DATA
-                if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $jobPostingCount >= 3) {
-                    $matchType = PayslipMatchType::LIMITED_DATA;
-                }
-    
-                $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
-                $count = $salaries->count();
-    
-                $lower = 0;
-                $median = 0;
-                $upper = 0;
-    
-                if ($count > 0) {
-                    $lower = $this->calculatePercentile($salaries, 0.25);
-                    $median = $this->calculatePercentile($salaries, 0.50);
-                    $upper = $this->calculatePercentile($salaries, 0.75);
-    
-                    // Attach matching payslips
-                    $report->payslips()->sync($matchingPayslips->pluck('id'));
-                }
-    
-                // Mark report as completed (or draft) with statistics and match data
-                $report->update([
-                    'status' => 'completed',
-                    'lower_percentile' => $lower,
-                    'median' => $median,
-                    'upper_percentile' => $upper,
-                    'description' => $description,
-                    'payslip_match' => $matchType->value,
-                    'match_metadata' => $metadata,
-                ]);
-    
-                // Generate conclusion using dedicated service
-                $conclusionGenerator = new ReportConclusionGenerator();
-                $conclusionGenerator->generate($report);
-    
-                // Count active job postings from thehub.io for this job title
-                $activeJobPostingsCount = JobPosting::where('job_title_id', $report->job_title_id)
-                    ->where('source', 'thehub.io')
-                    ->count();
-                
-                $report->update([
-                    'active_job_postings_the_hub' => $activeJobPostingsCount,
-                ]);
-            } else {
-                $report->update([
-                    'status' => 'draft',
-                ]);
-            }
-
-            // Clear guest session token
-            $request->session()->forget('guest_report_token');
-
-            DB::commit();
-
-            return redirect()->route('reports.show', $report->id)
-                ->with('success', 'Rapport oprettet succesfuldt');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => 'Der opstod en fejl ved oprettelse af rapporten: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Update job details (step 1) for an existing report.
-     */
-    public function updateJobDetails(Request $request, Report $report)
-    {
-        // Verify ownership
-        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
-            return back()->withErrors(['error' => 'Adgang nægtet.']);
-        }
-
-        $validated = $request->validate([
-            'job_title_id' => 'required|exists:job_titles,id',
-            'area_of_responsibility_id' => 'nullable|exists:area_of_responsibilities,id',
-            'experience' => 'required|integer|min:0|max:50',
-            'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
-            'region_id' => 'required|exists:regions,id',
-        ], [
-            'job_title_id.required' => 'Felt er påkrævet',
-            'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
-            'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
-            'experience.required' => 'Felt er påkrævet',
-            'experience.integer' => 'Erfaring skal være et heltal',
-            'experience.min' => 'Erfaring skal være mindst 0 år',
-            'experience.max' => 'Erfaring må maksimalt være 50 år',
-            'region_id.required' => 'Felt er påkrævet',
-            'region_id.exists' => 'Den valgte region er ugyldig',
-        ]);
-
-        // Normaliser gender til at have caps på første bogstav, eller null hvis tom
-        $gender = $validated['gender'] ?? null;
-        if ($gender && trim($gender) !== '') {
-            $gender = ucfirst(strtolower(trim($gender)));
-        } else {
-            $gender = null;
-        }
-
-        DB::beginTransaction();
-        try {
-            // Opdater payslip hvis det findes
-            $payslip = $report->uploadedPayslip;
-            if ($payslip) {
-                $payslip->update([
-                    'job_title_id' => $validated['job_title_id'],
-                    'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
-                    'experience' => $validated['experience'],
-                    'gender' => $gender,
-                    'region_id' => $validated['region_id'],
-                ]);
-            }
-
-            // Opdater report
-            $report->update([
-                'job_title_id' => $validated['job_title_id'],
-                'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
-                'experience' => $validated['experience'],
-                'region_id' => $validated['region_id'],
-                'filters' => array_merge($report->filters ?? [], [
-                    'gender' => $gender,
-                ]),
-            ]);
-
-            DB::commit();
-
-            // Calculate and save match status
-            $this->updateReportMatchStatus($report);
-
-            return redirect()->route('reports.create', ['report_id' => $report->id]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => 'Der opstod en fejl ved opdatering af data.']);
-        }
-    }
-
-    /**
      * Update competencies (step 2) - responsibility level, team size, skills.
      */
     public function updateCompetencies(Request $request, Report $report)
@@ -1002,8 +773,12 @@ class ReportsController extends Controller
      */
     public function show(Request $request, Report $report)
     {
-
         if ($report->status !== 'completed') {
+            return Redirect::route('reports.index');
+        }
+
+        $guestToken = $request->session()->get('guest_report_token');
+        if ($report->user_id !== $request->user()->id && $report->guest_token !== $guestToken) {
             return Redirect::route('reports.index');
         }
 

@@ -283,7 +283,7 @@ const formatCurrency = (value: number | null): string => {
     <!-- Success Toast Alert -->
     <ToastSuccessAlert 
         :show="showSuccessAlert"
-        message="Vi kontakter dig når rapporten er klar. Tak for hjælpen med at gøre vores database endnu bedre!"
+        message="Vi kontakter dig når rapporten er klar. Tak for at hjælpe med at gøre vores database endnu bedre!"
         @dismiss="dismissSuccessAlert"
     />
 </template>

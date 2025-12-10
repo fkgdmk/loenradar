@@ -616,8 +616,8 @@ const canUndo = () => historyIndex.value > 0;
                     v-if="isAnalyzing" 
                     class="absolute inset-0 bg-background/15 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded-lg z-10"
                 >
-                    <Spinner class="size-8 text-primary" />
-                    <span class="text-sm font-medium text-foreground">Analyserer lønseddel</span>
+                    <Spinner class="size-16 text-primary" />
+                    <span class="text-base font-medium text-foreground">Analyserer lønseddel</span>
                 </div>
             </div>
         </div>

@@ -18,7 +18,7 @@ class ValidatePayslipController extends Controller
      */
     public function __invoke(Request $request, Report $report)
     {
-        $isAdmin = $request->user()?->is_admin;
+        $isAdmin = (bool) $request->user()?->is_admin;
         $guestToken = $request->session()->get('guest_report_token');
         
         // Verify access to the report
@@ -36,23 +36,11 @@ class ValidatePayslipController extends Controller
             }
         }
 
-        // Throttle: 3 uploads per minute
-        $key = 'analyze-payslip:' . ($request->user()?->id ?? $request->ip());
-        if (!$isAdmin && RateLimiter::tooManyAttempts($key, 3)) {
-            $seconds = RateLimiter::availableIn($key);
-            return back()->withErrors([
-                'error' => "Du har uploadet for mange filer. Prøv igen om {$seconds} sekunder."
-            ]);
-        }
 
-        // Throttle: 5 uploads per half hour
-        $keyHalfHour = 'analyze-payslip-halfhour:' . ($request->user()?->id ?? $request->ip());
-        if (!$isAdmin && RateLimiter::tooManyAttempts($keyHalfHour, 5)) {
-            $seconds = RateLimiter::availableIn($keyHalfHour);
-            $minutes = ceil($seconds / 60);
-            return back()->withErrors([
-                'error' => "Du har uploadet for mange filer. Prøv igen om {$minutes} minut(ter)."
-            ]);
+        // Check rate limit (10 per hour for logged-in users, 5 per half hour for guests)
+        $rateLimitError = $this->checkRateLimit($request, $isAdmin);
+        if ($rateLimitError) {
+            return $rateLimitError;
         }
 
         $request->validate([
@@ -80,12 +68,6 @@ class ValidatePayslipController extends Controller
             ]);
         }
 
-
-        if (!$isAdmin) {
-            RateLimiter::hit($key, 60); // 60 seconds = 1 minute
-            RateLimiter::hit($keyHalfHour, 1800); // 1800 seconds = 30 minutes
-        }
-
         DB::beginTransaction();
 
         try {
@@ -102,6 +84,11 @@ class ValidatePayslipController extends Controller
                     ->withCustomProperties(['file_hash' => $fileHash])
                     ->toMediaCollection('documents');
             } else {
+
+                if (!$isAdmin) {
+                    $this->incrementRateLimit($request);
+                }
+
                 // Create new payslip
                 $payslip = Payslip::create([
                     'job_title_id' => $report->job_title_id,
@@ -187,6 +174,73 @@ class ValidatePayslipController extends Controller
                 'error' => $e->getMessage(),
             ]);
             return back()->withErrors(['error' => 'Der opstod en fejl ved gemning af lønsedlen.']);
+        }
+    }
+
+    /**
+     * Check rate limit for payslip uploads.
+     * Logged-in users: 10 per hour
+     * Guests: 5 per half hour
+     */
+    private function checkRateLimit(Request $request, bool $isAdmin): ?\Illuminate\Http\RedirectResponse
+    {
+        // if ($isAdmin) {
+        //     return null;
+        // }
+
+        // Throttle: 3 uploads per minute
+        $key = 'analyze-payslip:' . ($request->user()?->id ?? $request->ip());
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            $seconds = RateLimiter::availableIn($key);
+            return back()->withErrors([
+                'error' => "Du har uploadet for mange filer. Prøv igen om {$seconds} sekunder."
+            ]);
+        }
+
+        $isLoggedIn = $request->user() !== null;
+        
+        if ($isLoggedIn) {
+            // Logged-in users: 10 uploads per hour
+            $key = 'analyze-payslip-hour:' . $request->user()->id;
+            if (RateLimiter::tooManyAttempts($key, 10)) {
+                $seconds = RateLimiter::availableIn($key);
+                $minutes = ceil($seconds / 60);
+                return back()->withErrors([
+                    'error' => "Du har forsøgt at uploade for mange filer. Prøv igen om {$minutes} minut(ter)."
+                ]);
+            }
+        } else {
+            // Guests: 5 uploads per half hour
+            $key = 'analyze-payslip-halfhour:' . $request->ip();
+            if (RateLimiter::tooManyAttempts($key, 5)) {
+                $seconds = RateLimiter::availableIn($key);
+                $minutes = ceil($seconds / 60);
+                return back()->withErrors([
+                    'error' => "Du har forsøgt at uploade for mange filer. Prøv igen om {$minutes} minut(ter)."
+                ]);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Increment rate limit counter for payslip uploads.
+     */
+    private function incrementRateLimit(Request $request): void
+    {
+        $isLoggedIn = $request->user() !== null;
+
+        RateLimiter::hit('analyze-payslip:' . ($request->user()?->id ?? $request->ip()), 60); // 60 seconds = 1 minute
+        
+        if ($isLoggedIn) {
+            // Logged-in users: 10 uploads per hour (3600 seconds)
+            $key = 'analyze-payslip-hour:' . $request->user()->id;
+            RateLimiter::hit($key, 3600);
+        } else {
+            // Guests: 5 uploads per half hour (1800 seconds)
+            $key = 'analyze-payslip-halfhour:' . $request->ip();
+            RateLimiter::hit($key, 1800);
         }
     }
 }

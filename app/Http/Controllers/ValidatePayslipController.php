@@ -126,45 +126,47 @@ class ValidatePayslipController extends Controller
                     ->toMediaCollection('documents');
             }
 
-            // Valider og analyser lønseddel
-            $validator = new PayslipValidator();
-            $analysis = $validator->validateAndAnalyze($media);
+            try {
+                // Valider og analyser lønseddel
+                $validator = new PayslipValidator();
+                $analysis = $validator->validateAndAnalyze($media);
 
-            // Tjek om det er en lønseddel
-            if (!$analysis['is_payslip']) {
-                $media->delete();
-                DB::rollBack();
-                return back()->withErrors([
-                    'error' => 'Uploadet fil ser ikke ud til at være en lønseddel. Upload venligst en gyldig lønseddel.'
-                ]);
-            }
-
-            // Tjek om dato er ældre end et år
-            if ($analysis['payslip_date'] !== null) {
-                try {
-                    $payslipDate = \Carbon\Carbon::createFromFormat('Y-m-d', $analysis['payslip_date']);
-                    $oneYearAgo = now()->subYear();
-                    
-                    if ($payslipDate->lt($oneYearAgo)) {
-                        $media->delete();
-                        DB::rollBack();
-                        return back()->withErrors([
-                            'error' => 'Lønseddelen er ældre end et år. Upload venligst en lønseddel fra de seneste 12 måneder.'
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    // Hvis dato ikke kan parses, log og fortsæt
-                    Log::warning('Kunne ikke parse payslip dato', [
-                        'date' => $analysis['payslip_date'],
-                        'error' => $e->getMessage(),
+                // Tjek om det er en lønseddel
+                if (!$analysis['is_payslip']) {
+                    $media->delete();
+                    DB::rollBack();
+                    return back()->withErrors([
+                        'error' => 'Uploadet fil ser ikke ud til at være en lønseddel. Upload venligst en gyldig lønseddel.'
                     ]);
                 }
-            }
 
-            // Opdater payslip med salary hvis fundet
-            if ($analysis['salary'] !== null) {
-                $payslip->update(['salary' => $analysis['salary']]);
-            }
+                // Tjek om dato er ældre end et år
+                if ($analysis['payslip_date'] !== null) {
+                    try {
+                        $payslipDate = \Carbon\Carbon::createFromFormat('Y-m-d', $analysis['payslip_date']);
+                        $oneYearAgo = now()->subYear();
+                        
+                        if ($payslipDate->lt($oneYearAgo)) {
+                            $media->delete();
+                            DB::rollBack();
+                            return back()->withErrors([
+                                'error' => 'Lønseddelen er ældre end et år. Upload venligst en lønseddel fra de seneste 12 måneder.'
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        // Hvis dato ikke kan parses, log og fortsæt
+                        Log::warning('Kunne ikke parse payslip dato', [
+                            'date' => $analysis['payslip_date'],
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                }
+                // Opdater payslip med salary hvis fundet
+                if ($analysis['salary'] !== null) {
+                    $payslip->update(['salary' => $analysis['salary']]);
+                }
+            } catch (\Exception $e) {}
+
 
             DB::commit();
 

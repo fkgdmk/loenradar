@@ -13,7 +13,7 @@ use App\Models\ResponsibilityLevel;
 use App\Models\Skill;
 use App\Services\FindMatchingJobPostings;
 use App\Services\FindMatchingPayslips;
-use App\Services\ReportConclusionGenerator;
+use App\Services\ReportFinalizationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -652,6 +652,77 @@ class ReportsController extends Controller
         }
     }
 
+    public function updateJobDetails(Request $request, Report $report)
+    {
+        // Verify ownership
+        if ($report->user_id !== $request->user()->id || $report->status !== 'draft') {
+            return back()->withErrors(['error' => 'Adgang nægtet.']);
+        }
+
+        $validated = $request->validate([
+            'job_title_id' => 'required|exists:job_titles,id',
+            'area_of_responsibility_id' => 'nullable|exists:area_of_responsibilities,id',
+            'experience' => 'required|integer|min:0|max:50',
+            'gender' => 'nullable|string|in:mand,kvinde,andet,Mand,Kvinde,Andet',
+            'region_id' => 'required|exists:regions,id',
+        ], [
+            'job_title_id.required' => 'Felt er påkrævet',
+            'job_title_id.exists' => 'Den valgte jobtitel er ugyldig',
+            'area_of_responsibility_id.exists' => 'Det valgte område er ugyldigt',
+            'experience.required' => 'Felt er påkrævet',
+            'experience.integer' => 'Erfaring skal være et heltal',
+            'experience.min' => 'Erfaring skal være mindst 0 år',
+            'experience.max' => 'Erfaring må maksimalt være 50 år',
+            'region_id.required' => 'Felt er påkrævet',
+            'region_id.exists' => 'Den valgte region er ugyldig',
+        ]);
+
+        // Normaliser gender til at have caps på første bogstav, eller null hvis tom
+        $gender = $validated['gender'] ?? null;
+        if ($gender && trim($gender) !== '') {
+            $gender = ucfirst(strtolower(trim($gender)));
+        } else {
+            $gender = null;
+        }
+
+        DB::beginTransaction();
+        
+        try {
+            // Opdater payslip hvis det findes
+            $payslip = $report->uploadedPayslip;
+            if ($payslip) {
+                $payslip->update([
+                    'job_title_id' => $validated['job_title_id'],
+                    'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
+                    'experience' => $validated['experience'],
+                    'gender' => $gender,
+                    'region_id' => $validated['region_id'],
+                ]);
+            }
+
+            // Opdater report
+            $report->update([
+                'job_title_id' => $validated['job_title_id'],
+                'area_of_responsibility_id' => $validated['area_of_responsibility_id'] ?? null,
+                'experience' => $validated['experience'],
+                'region_id' => $validated['region_id'],
+                'filters' => array_merge($report->filters ?? [], [
+                    'gender' => $gender,
+                ]),
+            ]);
+
+            DB::commit();
+
+            // Calculate and save match status
+            $this->updateReportMatchStatus($report);
+
+            return redirect()->route('reports.create', ['report_id' => $report->id]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Der opstod en fejl ved opdatering af data.']);
+        }
+    }
+
     /**
      * Update competencies for guests (step 2) - responsibility level, team size, skills.
      */
@@ -834,66 +905,13 @@ class ReportsController extends Controller
                 ]),
             ]);
 
-            // Beregn statistik
-            $findMatchingPayslips = new FindMatchingPayslips();
-            $result = $findMatchingPayslips->find($report);
-            $matchingPayslips = $result['payslips'];
-            $description = $result['description'];
-            $matchType = $result['match_type'];
-            $metadata = $result['metadata'];
-
-            // Find and attach matching job postings
-            $findMatchingJobPostings = new FindMatchingJobPostings();
-            $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
-
-            $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
-            $count = $salaries->count();
-
-            $lower = 0;
-            $median = 0;
-            $upper = 0;
-
-            if ($count > 0) {
-                $lower = $this->calculatePercentile($salaries, 0.25);   
-                $median = $this->calculatePercentile($salaries, 0.50);
-                $upper = $this->calculatePercentile($salaries, 0.75);
-
-                // Attach payslips
-                $report->payslips()->sync($matchingPayslips->pluck('id'));
-            }
-
-            // Determine status
-            $status = ReportStatus::COMPLETED;
-            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
-                $status = ReportStatus::AWAITING_DATA;
-            }
-
-            $report->update([
-                'status' => $status,
-                'lower_percentile' => $lower,
-                'median' => $median,
-                'upper_percentile' => $upper,
-                'description' => $description,
-                'payslip_match' => $matchType->value,
-                'match_metadata' => $metadata,
-            ]);
-
-            // Generate conclusion using dedicated service
-            $conclusionGenerator = new ReportConclusionGenerator();
-            $conclusionGenerator->generate($report);
-
-            // Count active job postings from thehub.io for this job title
-            $activeJobPostingsCount = JobPosting::where('job_title_id', $report->job_title_id)
-                ->where('source', 'thehub.io')
-                ->count();
-            
-            $report->update([
-                'active_job_postings_the_hub' => $activeJobPostingsCount,
-            ]);
+            // Finalize report using service
+            $finalizationService = new ReportFinalizationService();
+            $finalizationService->finalize($report);
 
             DB::commit();
 
-            if ($status === ReportStatus::AWAITING_DATA) {
+            if ($report->status === ReportStatus::AWAITING_DATA->value) {
                 return redirect()->route('reports.index')
                     ->with('success', 'insufficient_data');
             }
@@ -981,19 +999,4 @@ class ReportsController extends Controller
     }
 
 
-    private function calculatePercentile($sortedData, $percentile)
-    {
-        $index = ($sortedData->count() - 1) * $percentile;
-        $floor = floor($index);
-        $ceil = ceil($index);
-
-        if ($floor == $ceil) {
-            return $sortedData[$index];
-        }
-
-        $d0 = $sortedData[$floor];
-        $d1 = $sortedData[$ceil];
-
-        return round($d0 + ($d1 - $d0) * ($index - $floor), 0);
-    }
 }

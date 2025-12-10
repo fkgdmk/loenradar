@@ -14,7 +14,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     title: 'Sådan!',
     autoHide: true,
-    autoHideDelay: 5000,
+    autoHideDelay: 7000,
     show: false,
 });
 

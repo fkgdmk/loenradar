@@ -121,7 +121,7 @@ class ValidatePayslipController extends Controller
 
                     // Tjek om det er en lønseddel
                     if (!$analysis['is_payslip']) {
-                        $media->delete();
+                        $payslip->clearMediaCollection('documents');
                         DB::rollBack();
                         return back()->withErrors([
                             'error' => 'Uploadet fil ser ikke ud til at være en lønseddel. Upload venligst en gyldig lønseddel.'
@@ -135,12 +135,14 @@ class ValidatePayslipController extends Controller
                             $oneYearAgo = now()->subMonths(18);
                             
                             if ($payslipDate->lt($oneYearAgo)) {
-                                $media->delete();
+                                $payslip->clearMediaCollection('documents');
                                 DB::rollBack();
                                 return back()->withErrors([
                                     'error' => 'Lønseddelen er ældre end et år. Upload venligst en lønseddel fra de seneste 12 måneder.'
                                 ]);
                             }
+
+                            $payslip->update(['uploaded_at' => $analysis['payslip_date']]);
                         } catch (\Exception $e) {
                             // Hvis dato ikke kan parses, log og fortsæt
                             Log::warning('Kunne ikke parse payslip dato', [

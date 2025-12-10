@@ -48,9 +48,9 @@ class ValidatePayslipController extends Controller
             'original_file_hash' => 'required|string|size:64', // SHA256 hash er altid 64 karakterer
         ], [
             'document.required' => 'Upload venligst din lønseddel',
-            'document.file' => 'Dokumentet skal være en fil',
-            'document.mimes' => 'Dokumentet skal være et billede (PNG eller JPG)',
-            'document.max' => 'Dokumentet må maksimalt være 10MB',
+            'document.file' => 'Lønsedlen skal være en fil',
+            'document.mimes' => 'Filen skal være et billede (PNG eller JPG)',
+            'document.max' => 'Filen må maksimalt være 10MB',
             'original_file_hash.required' => 'Original fil hash mangler',
             'original_file_hash.size' => 'Ugyldig hash format',
         ]);

@@ -518,7 +518,68 @@ const formattedConclusion = computed(() => {
             <!-- Full Width Cards Section -->
             <div class="space-y-4 sm:space-y-6">
 
-                    <!-- Prosa Stats Card -->
+                    <!-- Job Postings Card -->
+                    <Card v-if="report.job_postings && report.job_postings.length > 0">
+                        <CardHeader>
+                            <CardTitle class="text-base sm:text-lg">
+                                <span>Matchende Jobopslag</span> <span class="text-muted-foreground text-sm">der inkluderer løn</span></CardTitle>
+                            <CardDescription class="text-xs sm:text-sm">
+                                Jobopslag der matcher din profil baseret på job titel, region, erfaring og skills.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div class="space-y-3">
+                                <div 
+                                    v-for="jobPosting in report.job_postings" 
+                                    :key="jobPosting.id"
+                                    class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                                >
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex flex-wrap items-start sm:items-center gap-2 mb-2">
+                                            <h3 class="font-semibold text-base sm:text-lg break-words">{{ jobPosting.title }}</h3>
+                                            <span 
+                                                class="px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full flex-shrink-0"
+                                                :class="getMatchScoreClass(jobPosting.pivot.match_score)"
+                                            >
+                                                Match: {{ jobPosting.pivot.match_score ?? 0 }}/10
+                                            </span>
+                                        </div>
+                                        <div class="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
+                                            <div v-if="jobPosting.company" class="font-medium text-foreground">
+                                                {{ jobPosting.company }}
+                                            </div>
+                                            <div v-if="jobPosting.region" class="flex flex-wrap items-center gap-2 sm:gap-4">
+                                                <span>{{ jobPosting.region.name }}</span>
+                                                <span v-if="jobPosting.salary_from || jobPosting.salary_to">
+                                                    {{ formatSalaryRange(jobPosting.salary_from, jobPosting.salary_to) }}
+                                                </span>
+                                            </div>
+                                            <div v-if="jobPosting.skills && jobPosting.skills.length > 0" class="flex flex-wrap gap-1 mt-2">
+                                                <span
+                                                    v-for="skill in jobPosting.skills"
+                                                    :key="skill.id"
+                                                    class="px-1 py-0.5 text-[9px] rounded border"
+                                                    :class="isSkillMatching(skill.id) 
+                                                        ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
+                                                        : 'bg-muted text-muted-foreground border-border'"
+                                                >
+                                                    {{ skill.name }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="sm:ml-4 flex-shrink-0">
+                                        <Button variant="outline" size="sm" as-child class="w-full sm:w-auto">
+                                            <a :href="jobPosting.url" target="_blank" rel="noopener noreferrer">
+                                                Se opslag <ExternalLink class="ml-2 h-4 w-4" />
+                                            </a>
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     <Card v-if="relevantProsaStats.length > 0">
                         <CardHeader>
                             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -587,68 +648,6 @@ const formattedConclusion = computed(() => {
                             <p class="mt-3 sm:mt-4 text-[10px] sm:text-xs text-muted-foreground">
                                 Data er baseret på PROSA's lønstatistik. Markeret række viser intervallet der matcher din erfaring.
                             </p>
-                        </CardContent>
-                    </Card>
-
-                    <!-- Job Postings Card -->
-                    <Card v-if="report.job_postings && report.job_postings.length > 0">
-                        <CardHeader>
-                            <CardTitle class="text-base sm:text-lg">
-                                <span>Matchende Jobopslag</span> <span class="text-muted-foreground text-sm">der inkluderer løn</span></CardTitle>
-                            <CardDescription class="text-xs sm:text-sm">
-                                Jobopslag der matcher din profil baseret på job titel, region, erfaring og skills.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div class="space-y-3">
-                                <div 
-                                    v-for="jobPosting in report.job_postings" 
-                                    :key="jobPosting.id"
-                                    class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                                >
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex flex-wrap items-start sm:items-center gap-2 mb-2">
-                                            <h3 class="font-semibold text-base sm:text-lg break-words">{{ jobPosting.title }}</h3>
-                                            <span 
-                                                class="px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full flex-shrink-0"
-                                                :class="getMatchScoreClass(jobPosting.pivot.match_score)"
-                                            >
-                                                Match: {{ jobPosting.pivot.match_score ?? 0 }}/10
-                                            </span>
-                                        </div>
-                                        <div class="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
-                                            <div v-if="jobPosting.company" class="font-medium text-foreground">
-                                                {{ jobPosting.company }}
-                                            </div>
-                                            <div v-if="jobPosting.region" class="flex flex-wrap items-center gap-2 sm:gap-4">
-                                                <span>{{ jobPosting.region.name }}</span>
-                                                <span v-if="jobPosting.salary_from || jobPosting.salary_to">
-                                                    {{ formatSalaryRange(jobPosting.salary_from, jobPosting.salary_to) }}
-                                                </span>
-                                            </div>
-                                            <div v-if="jobPosting.skills && jobPosting.skills.length > 0" class="flex flex-wrap gap-1 mt-2">
-                                                <span
-                                                    v-for="skill in jobPosting.skills"
-                                                    :key="skill.id"
-                                                    class="px-1 py-0.5 text-[9px] rounded border"
-                                                    :class="isSkillMatching(skill.id) 
-                                                        ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30' 
-                                                        : 'bg-muted text-muted-foreground border-border'"
-                                                >
-                                                    {{ skill.name }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="sm:ml-4 flex-shrink-0">
-                                        <Button variant="outline" size="sm" as-child class="w-full sm:w-auto">
-                                            <a :href="jobPosting.url" target="_blank" rel="noopener noreferrer">
-                                                Se opslag <ExternalLink class="ml-2 h-4 w-4" />
-                                            </a>
-                                        </Button>
-                                    </div>
-                                </div>
-                            </div>
                         </CardContent>
                     </Card>
             </div>

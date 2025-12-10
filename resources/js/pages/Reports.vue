@@ -243,24 +243,26 @@ const formatCurrency = (value: number | null): string => {
                             </div>
 
                             <!-- Lønstatistikker (skjules hvis ikke tilgængelig) -->
-                            <div v-if="report.median" class="space-y-2 border-t pt-4">
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="text-muted-foreground">Median løn:</span>
-                                    <span class="font-semibold text-foreground">
-                                        {{ formatCurrency(report.median) }}
-                                    </span>
-                                </div>
-                                <div
-                                    v-if="report.lower_percentile || report.upper_percentile"
-                                    class="flex items-center gap-2 text-xs text-muted-foreground"
-                                >
-                                    <span v-if="report.lower_percentile">
-                                        {{ formatCurrency(report.lower_percentile) }}
-                                    </span>
-                                    <TrendingUp class="h-3 w-3" />
-                                    <span v-if="report.upper_percentile">
-                                        {{ formatCurrency(report.upper_percentile) }}
-                                    </span>
+                            <div class="space-y-2 border-t pt-4">
+                                <div v-if="report.status === 'completed' && report.median" >
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-muted-foreground">Median løn:</span>
+                                        <span class="font-semibold text-foreground">
+                                            {{ formatCurrency(report.median) }}
+                                        </span>
+                                    </div>
+                                    <div
+                                        v-if="report.lower_percentile || report.upper_percentile"
+                                        class="flex items-center gap-2 text-xs text-muted-foreground"
+                                    >
+                                        <span v-if="report.lower_percentile">
+                                            {{ formatCurrency(report.lower_percentile) }}
+                                        </span>
+                                        <TrendingUp class="h-3 w-3" />
+                                        <span v-if="report.upper_percentile">
+                                            {{ formatCurrency(report.upper_percentile) }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 

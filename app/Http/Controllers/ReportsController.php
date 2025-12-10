@@ -802,68 +802,68 @@ class ReportsController extends Controller
                 ]);
             }
 
-            // Calculate statistics
-            $findMatchingPayslips = new FindMatchingPayslips();
-            $result = $findMatchingPayslips->find($report);
-            $matchingPayslips = $result['payslips'];
-            $description = $result['description'];
-            $matchType = $result['match_type'];
-            $metadata = $result['metadata'];
-
-            // Find and attach matching job postings
-            $findMatchingJobPostings = new FindMatchingJobPostings();
-            $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
-
-            // Check if we should override INSUFFICIENT_DATA
-            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $jobPostingCount >= 3) {
-                 $matchType = PayslipMatchType::LIMITED_DATA;
+            if ($report->payslip_match !== PayslipMatchType::INSUFFICIENT_DATA) {
+                // Calculate statistics
+                $findMatchingPayslips = new FindMatchingPayslips();
+                $result = $findMatchingPayslips->find($report);
+                $matchingPayslips = $result['payslips'];
+                $description = $result['description'];
+                $matchType = $result['match_type'];
+                $metadata = $result['metadata'];
+    
+                // Find and attach matching job postings
+                $findMatchingJobPostings = new FindMatchingJobPostings();
+                $jobPostingCount = $findMatchingJobPostings->findAndAttach($report);
+    
+                // Check if we should override INSUFFICIENT_DATA
+                if ($matchType === PayslipMatchType::INSUFFICIENT_DATA && $jobPostingCount >= 3) {
+                    $matchType = PayslipMatchType::LIMITED_DATA;
+                }
+    
+                $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
+                $count = $salaries->count();
+    
+                $lower = 0;
+                $median = 0;
+                $upper = 0;
+    
+                if ($count > 0) {
+                    $lower = $this->calculatePercentile($salaries, 0.25);
+                    $median = $this->calculatePercentile($salaries, 0.50);
+                    $upper = $this->calculatePercentile($salaries, 0.75);
+    
+                    // Attach matching payslips
+                    $report->payslips()->sync($matchingPayslips->pluck('id'));
+                }
+    
+                // Mark report as completed (or draft) with statistics and match data
+                $report->update([
+                    'status' => 'completed',
+                    'lower_percentile' => $lower,
+                    'median' => $median,
+                    'upper_percentile' => $upper,
+                    'description' => $description,
+                    'payslip_match' => $matchType->value,
+                    'match_metadata' => $metadata,
+                ]);
+    
+                // Generate conclusion using dedicated service
+                $conclusionGenerator = new ReportConclusionGenerator();
+                $conclusionGenerator->generate($report);
+    
+                // Count active job postings from thehub.io for this job title
+                $activeJobPostingsCount = JobPosting::where('job_title_id', $report->job_title_id)
+                    ->where('source', 'thehub.io')
+                    ->count();
+                
+                $report->update([
+                    'active_job_postings_the_hub' => $activeJobPostingsCount,
+                ]);
+            } else {
+                $report->update([
+                    'status' => 'draft',
+                ]);
             }
-
-            $salaries = $matchingPayslips->pluck('total_salary_dkk')->sort()->values();
-            $count = $salaries->count();
-
-            $lower = 0;
-            $median = 0;
-            $upper = 0;
-
-            if ($count > 0) {
-                $lower = $this->calculatePercentile($salaries, 0.25);
-                $median = $this->calculatePercentile($salaries, 0.50);
-                $upper = $this->calculatePercentile($salaries, 0.75);
-
-                // Attach matching payslips
-                $report->payslips()->sync($matchingPayslips->pluck('id'));
-            }
-
-            // Determine status
-            $status = 'completed';
-            if ($matchType === PayslipMatchType::INSUFFICIENT_DATA) {
-                $status = 'draft';
-            }
-
-            // Mark report as completed (or draft) with statistics and match data
-            $report->update([
-                'status' => $status,
-                'lower_percentile' => $lower,
-                'median' => $median,
-                'upper_percentile' => $upper,
-                'description' => $description,
-                'payslip_match' => $matchType->value,
-                'match_metadata' => $metadata,
-            ]);
-
-            // Generate conclusion using dedicated service
-            $conclusionGenerator = new ReportConclusionGenerator();
-            $conclusionGenerator->generate($report);
-
-            // Count active job postings from thehub.io for this job title
-            $activeJobPostingsCount = JobPosting::where('job_title_id', $report->job_title_id)
-                ->where('source', 'thehub.io')
-                ->count();
-            
-            $report->update([
-                'active_job_postings_the_hub' => $activeJobPostingsCount,
-            ]);
 
             // Clear guest session token
             $request->session()->forget('guest_report_token');

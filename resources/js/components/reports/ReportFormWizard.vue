@@ -108,7 +108,6 @@ const triggerEditAnonymizer = () => {
 };
 
 const isInsufficientData = computed(() => rf.value.payslipMatch.value === 'insufficient_data');
-const isLimitedData = computed(() => rf.value.payslipMatch.value === 'limited_data');
 
 const payslipCountDisplay = computed(() => {
     const count = rf.value.matchMetadata.value?.payslip_count ?? 0;
@@ -121,15 +120,14 @@ const payslipsNeeded = computed(() => 5 - payslipCountDisplay.value);
 const progressPercentage = computed(() => (payslipCountDisplay.value / 5) * 100);
 
 const effectiveSubmitButtonText = computed(() => {
+    if (!props.isAuthenticated) {
+        return 'Log ind & Upload';
+    }
+
     if (isInsufficientData.value) {
-        if (!props.isAuthenticated) {
-            return 'Log ind & Upload';
-        }
         return 'Upload';
     }
-    if (isLimitedData.value) {
-        return 'Upload';
-    }
+    
     return props.submitButtonText;
 });
 
@@ -294,7 +292,7 @@ const handleSubmit = () => {
 
                 <!-- Step 2: Ansvar og færdigheder -->
                 <div v-if="rf.currentStep.value === 2" class="space-y-6">
-                    <div v-if="isInsufficientData" class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 border border-primary/10 p-5">
+                    <div v-if="isInsufficientData" class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/5 to-primary/10 border border-primary/10 p-5 mb-8">
                         
                         <div class="relative space-y-4">
                             <div class="flex items-start gap-3">
@@ -343,7 +341,7 @@ const handleSubmit = () => {
 
                     <!-- Team Size (kun for ledere) -->
                     <div v-if="rf.showTeamSize.value">
-                        <Label class="mb-2">
+                        <Label class="mb-4">
                             Hvor mange personer er du faglig eller personalemæssig leder for?
                         </Label>
                         <Input
@@ -358,18 +356,18 @@ const handleSubmit = () => {
                     <!-- Skills -->
                     <div>
                         <Label class="mb-2">
-                            Oplist de vigtigste teknologier, systemer eller metoder, du bruger i dit job. (valgfrit)
+                            Vælg de vigtigste teknologier, systemer eller metoder, du bruger i dit job.
                         </Label>
-                        <p class="mb-4 text-sm text-muted-foreground">
-                            Vælg op til 5 færdigheder
-                        </p>
                         <Input
                             v-model="rf.skillSearch.value"
                             type="text"
                             placeholder="Søg efter færdigheder..."
-                            class="mb-4"
+                            class="mb-1"
                             :disabled="!rf.form.job_title_id"
                         />
+                        <p class="mb-4 text-xs text-muted-foreground">
+                            Vælg op til 5 færdigheder
+                        </p>
                         <div
                             v-if="!rf.form.job_title_id"
                             class="rounded-md border border-dashed p-4 text-sm text-muted-foreground"

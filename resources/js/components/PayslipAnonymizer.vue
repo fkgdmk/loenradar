@@ -229,6 +229,21 @@ const resetZoom = () => {
 
 const zoomPercentage = computed(() => Math.round(zoomLevel.value * 100));
 
+const brushCursor = computed(() => {
+    if (props.isAnalyzing) return 'default';
+    
+    // Laver en pensel-cursor SVG der matcher penselstørrelsen
+    const size = Math.max(16, brushSize.value);
+    const radius = size / 2;
+    const svg = encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size * 2}" height="${size * 2}" viewBox="0 0 ${size * 2} ${size * 2}">
+            <circle cx="${size}" cy="${size}" r="${radius}" fill="black" opacity="0.5" stroke="white" stroke-width="1.5"/>
+        </svg>
+    `.trim());
+    
+    return `url('data:image/svg+xml;utf8,${svg}') ${size} ${size}, crosshair`;
+});
+
 const saveToHistory = () => {
     if (!ctx.value || !canvasRef.value) return;
 
@@ -549,8 +564,9 @@ const canUndo = () => historyIndex.value > 0;
             >
                 <canvas
                     ref="canvasRef"
-                    class="touch-none cursor-crosshair block flex-shrink-0"
+                    class="touch-none block flex-shrink-0"
                     :class="{ 'pointer-events-none': isAnalyzing }"
+                    :style="{ cursor: brushCursor }"
                     @pointerdown="startDrawing"
                     @pointermove="draw"
                     @pointerup="stopDrawing"

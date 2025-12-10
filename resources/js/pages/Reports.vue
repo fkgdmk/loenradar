@@ -219,7 +219,7 @@ const formatCurrency = (value: number | null): string => {
                                             {{ report.job_title || 'Ukendt jobtitel' }}
                                         </CardTitle>
                                     </div>
-                                    <Badge variant="outline" class="text-muted-foreground bg-muted">
+                                    <Badge class="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
                                         Afventer
                                     </Badge>
                                 </div>

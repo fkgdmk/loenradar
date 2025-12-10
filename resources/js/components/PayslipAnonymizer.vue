@@ -51,6 +51,10 @@ const isDrawing = ref(false);
 const brushSize = ref(10);
 const brushColor = '#000000'; // Fast sort farve
 
+// Brush cursor position
+const cursorPosition = ref({ x: -1000, y: -1000 });
+const showCursor = ref(false);
+
 // History for undo
 const history = ref<ImageData[]>([]);
 const historyIndex = ref(-1);
@@ -229,19 +233,24 @@ const resetZoom = () => {
 
 const zoomPercentage = computed(() => Math.round(zoomLevel.value * 100));
 
+// Dynamic brush cursor that matches brush size
 const brushCursor = computed(() => {
-    if (props.isAnalyzing) return 'default';
+    // Calculate cursor size based on brush size and zoom
+    const brushDiameter = brushSize.value * scale.value;
+    // Make cursor canvas larger to ensure visibility
+    const cursorSize = Math.max(brushDiameter + 8, 32);
+    const center = cursorSize / 2;
+    const radius = brushDiameter / 2;
     
-    // Laver en pensel-cursor SVG der matcher penselstørrelsen
-    const size = Math.max(16, brushSize.value);
-    const radius = size / 2;
-    const svg = encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="${size * 2}" height="${size * 2}" viewBox="0 0 ${size * 2} ${size * 2}">
-            <circle cx="${size}" cy="${size}" r="${radius}" fill="black" opacity="0.5" stroke="white" stroke-width="1.5"/>
-        </svg>
-    `.trim());
+    // Create SVG circle cursor - Paint-style brush preview
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cursorSize}" height="${cursorSize}">
+        <circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="#000" stroke-width="2"/>
+        <circle cx="${center}" cy="${center}" r="${Math.max(radius - 1.5, 0)}" fill="none" stroke="#fff" stroke-width="1"/>
+    </svg>`;
     
-    return `url('data:image/svg+xml;utf8,${svg}') ${size} ${size}, crosshair`;
+    // Encode SVG properly
+    const encoded = encodeURIComponent(svg);
+    return `url("data:image/svg+xml;charset=utf-8,${encoded}") ${center} ${center}, none`;
 });
 
 const saveToHistory = () => {
@@ -307,7 +316,19 @@ const startDrawing = (e: PointerEvent) => {
     ctx.value.stroke();
 };
 
+const updateCursorPosition = (e: PointerEvent) => {
+    if (!canvasRef.value) return;
+    const rect = canvasRef.value.getBoundingClientRect();
+    cursorPosition.value = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+    };
+    showCursor.value = true;
+};
+
 const draw = (e: PointerEvent) => {
+    updateCursorPosition(e);
+    
     if (!isDrawing.value || !ctx.value) return;
 
     const { x, y } = getPointerPosition(e);
@@ -322,6 +343,10 @@ const stopDrawing = () => {
         saveToHistory();
     }
     isDrawing.value = false;
+};
+
+const hideCursor = () => {
+    showCursor.value = false;
 };
 
 const increaseBrushSize = () => {

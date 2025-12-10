@@ -280,7 +280,7 @@ export function useReportForm(options: UseReportFormOptions) {
         }
     };
 
-    const handleAnonymizedImage = async (anonymizedFile: File) => {
+    const handleAnonymizedImage = async (anonymizedFile: File, originalHash: string) => {
         if (!reportId.value || reportId.value === 'guest') {
             console.error('Ingen report_id fundet');
             return;
@@ -291,6 +291,7 @@ export function useReportForm(options: UseReportFormOptions) {
             const analyzeUrl = resolveEndpoint(endpoints.analyze, reportId.value);
             const analyzeForm = useForm({
                 document: anonymizedFile,
+                original_file_hash: originalHash,
             });
 
             // Set loading state
@@ -343,8 +344,10 @@ export function useReportForm(options: UseReportFormOptions) {
     };
 
     const removeFile = () => {
-        // If there's a persisted document, delete it from server
-        if (persistedDocument.value && reportId.value && reportId.value !== 'guest' && endpoints.deletePayslip) {
+        // If there's a reportId and delete endpoint, try to delete from server
+        // This handles both cases: when there's a persistedDocument in state, 
+        // and when there's only an uploadedFile but a persisted document exists on server
+        if (reportId.value && endpoints.deletePayslip) {
             const deleteUrl = resolveEndpoint(endpoints.deletePayslip, reportId.value);
             router.delete(deleteUrl, {
                 preserveScroll: true,
@@ -359,10 +362,18 @@ export function useReportForm(options: UseReportFormOptions) {
                 },
                 onError: (errors: any) => {
                     console.error('Fejl ved sletning af lønseddel:', errors);
+                    // Even if delete fails, remove from local state
+                    uploadedFile.value = null;
+                    uploadedFilePreview.value = null;
+                    persistedDocument.value = null;
+                    form.document = null;
+                    if (fileInputRef.value) {
+                        fileInputRef.value.value = '';
+                    }
                 },
             });
         } else {
-            // Just remove from local state
+            // Just remove from local state (no reportId or guest report)
             uploadedFile.value = null;
             uploadedFilePreview.value = null;
             persistedDocument.value = null;

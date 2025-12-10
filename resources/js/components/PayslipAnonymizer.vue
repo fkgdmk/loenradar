@@ -17,6 +17,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { sha256 } from 'js-sha256';
 
 // Sæt worker path
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -31,7 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-    (e: 'save', file: File): void;
+    (e: 'save', file: File, originalHash: string): void;
     (e: 'cancel'): void;
 }>();
 
@@ -45,6 +46,7 @@ const originalImage = ref<HTMLImageElement | null>(null);
 const imageLoaded = ref(false);
 const isLoadingPdf = ref(false);
 const loadError = ref<string | null>(null);
+const originalFileHash = ref<string | null>(null);
 
 // Drawing state
 const isDrawing = ref(false);
@@ -85,8 +87,17 @@ const brushStep = 5;
 
 const isPdf = (file: File) => file.type === 'application/pdf';
 
+// Beregn SHA256 hash af filen
+const calculateFileHash = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    return sha256(arrayBuffer);
+};
+
 const loadFile = async () => {
     loadError.value = null;
+    
+    // Beregn hash af original filen
+    originalFileHash.value = await calculateFileHash(props.file);
     
     if (isPdf(props.file)) {
         await loadPdf();
@@ -362,7 +373,7 @@ const decreaseBrushSize = () => {
 };
 
 const saveImage = async () => {
-    if (!canvasRef.value) return;
+    if (!canvasRef.value || !originalFileHash.value) return;
 
     canvasRef.value.toBlob((blob) => {
         if (blob) {
@@ -372,7 +383,7 @@ const saveImage = async () => {
             const newFile = new File([blob], `${nameWithoutExt}_anonymized.png`, {
                 type: 'image/png',
             });
-            emit('save', newFile);
+            emit('save', newFile, originalFileHash.value!);
         }
     }, 'image/png', 1.0);
 };
@@ -437,6 +448,7 @@ watch(() => props.file, () => {
     imageLoaded.value = false;
     isLoadingPdf.value = false;
     loadError.value = null;
+    originalFileHash.value = null;
     loadFile();
 });
 

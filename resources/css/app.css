@@ -101,7 +101,7 @@
     --accent-foreground: hsl(15 80% 30%);
     /* === SLUT BRAND FARVER === */
     
-    --background: hsl(30 20% 99%);
+    --background: hsl(30, 30%, 98%);
     --foreground: hsl(20 15% 15%);
     --card: hsl(0 0% 100%);
     --card-foreground: hsl(20 15% 15%);
@@ -113,7 +113,7 @@
     --muted-foreground: hsl(20 10% 45%);
     --destructive: hsl(0 84.2% 60.2%);
     --destructive-foreground: hsl(0 0% 98%);
-    --border: hsl(30 15% 90%);
+    --border: hsl(30 15% 80%);
     --input: hsl(30 15% 88%);
     --ring: hsl(15 80% 50%);
     --chart-1: hsl(15 80% 55%);

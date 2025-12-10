@@ -321,7 +321,7 @@ const formattedConclusion = computed(() => {
             <!-- Top Section: Konklusion + Profil Detaljer side by side -->
             <div class="grid gap-4 sm:gap-6 md:grid-cols-3">
                 <!-- Conclusion Card -->
-                <Card class="bg-primary/5 border-primary/20 flex flex-col md:col-span-2">
+                <Card class="bg-primary/5 border-primary/40 flex flex-col md:col-span-2">
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2 text-primary">
                             <TrendingUp class="h-5 w-5" />

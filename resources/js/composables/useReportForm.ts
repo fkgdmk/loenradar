@@ -201,7 +201,7 @@ export function useReportForm(options: UseReportFormOptions) {
     const isStep2Valid = computed(() => {
         return !!(
             form.responsibility_level_id &&
-            (selectedSkills.value.length === 0 || selectedSkills.value.length <= 5)
+            (selectedSkills.value.length === 0 || selectedSkills.value.length <= 10)
         );
     });
 
@@ -371,7 +371,7 @@ export function useReportForm(options: UseReportFormOptions) {
         if (index > -1) {
             selectedSkills.value.splice(index, 1);
         } else {
-            if (selectedSkills.value.length < 5) {
+            if (selectedSkills.value.length < 10) {
                 selectedSkills.value.push(skillId);
             }
         }

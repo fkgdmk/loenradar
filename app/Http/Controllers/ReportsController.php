@@ -708,7 +708,7 @@ class ReportsController extends Controller
             'report_id' => 'required|exists:reports,id',
             'responsibility_level_id' => 'required|exists:responsibility_levels,id',
             'team_size' => 'nullable|integer|min:0|max:1000',
-            'skill_ids' => 'nullable|array|max:5',
+            'skill_ids' => 'nullable|array|max:10',
             'skill_ids.*' => 'exists:skills,id',
         ]);
 
@@ -964,7 +964,7 @@ class ReportsController extends Controller
         $validated = $request->validate([
             'responsibility_level_id' => 'required|exists:responsibility_levels,id',
             'team_size' => 'nullable|integer|min:0|max:1000',
-            'skill_ids' => 'nullable|array|max:5',
+            'skill_ids' => 'nullable|array|max:10',
             'skill_ids.*' => 'exists:skills,id',
         ]);
 
@@ -1036,7 +1036,7 @@ class ReportsController extends Controller
             'report_id' => 'required|exists:reports,id',
             'responsibility_level_id' => 'required|exists:responsibility_levels,id',
             'team_size' => 'nullable|integer|min:0|max:1000',
-            'skill_ids' => 'nullable|array|max:5',
+            'skill_ids' => 'nullable|array|max:10',
             'skill_ids.*' => 'exists:skills,id',
         ]);
 

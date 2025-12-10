@@ -127,7 +127,7 @@ const effectiveSubmitButtonText = computed(() => {
     if (isInsufficientData.value) {
         return 'Upload';
     }
-    
+
     return props.submitButtonText;
 });
 
@@ -366,7 +366,7 @@ const handleSubmit = () => {
                             :disabled="!rf.form.job_title_id"
                         />
                         <p class="mb-4 text-xs text-muted-foreground">
-                            Vælg op til 5 færdigheder
+                            Vælg op til 10 færdigheder
                         </p>
                         <div
                             v-if="!rf.form.job_title_id"
@@ -393,7 +393,7 @@ const handleSubmit = () => {
                             </Badge>
                         </div>
                         <p v-if="rf.selectedSkills.value.length > 0" class="mt-2 text-sm text-muted-foreground">
-                            Valgt: {{ rf.selectedSkills.value.length }} / 5
+                            Valgt: {{ rf.selectedSkills.value.length }} / 10
                         </p>
                     </div>
                 </div>

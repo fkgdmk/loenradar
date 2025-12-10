@@ -14,6 +14,7 @@ import {
     ZoomOut,
     RotateCcw
 } from 'lucide-vue-next';
+import { Spinner } from '@/components/ui/spinner';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
@@ -22,9 +23,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 interface Props {
     file: File;
+    isAnalyzing?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    isAnalyzing: false,
+});
 
 const emit = defineEmits<{
     (e: 'save', file: File): void;
@@ -540,12 +544,13 @@ const canUndo = () => historyIndex.value > 0;
             <!-- Canvas wrapper for centering -->
             <div 
                 v-show="imageLoaded && !loadError"
-                class="flex justify-center items-start"
+                class="flex justify-center items-start relative"
                 :style="{ minWidth: canvasWidth > 0 ? `${canvasWidth}px` : 'auto' }"
             >
                 <canvas
                     ref="canvasRef"
                     class="touch-none cursor-crosshair block flex-shrink-0"
+                    :class="{ 'pointer-events-none': isAnalyzing }"
                     @pointerdown="startDrawing"
                     @pointermove="draw"
                     @pointerup="stopDrawing"
@@ -553,6 +558,14 @@ const canUndo = () => historyIndex.value > 0;
                     @pointercancel="stopDrawing"
                     @touchmove.prevent
                 />
+                <!-- Analysis loader overlay -->
+                <div 
+                    v-if="isAnalyzing" 
+                    class="absolute inset-0 bg-background/15 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded-lg z-10"
+                >
+                    <Spinner class="size-8 text-primary" />
+                    <span class="text-sm font-medium text-foreground">Analyserer lønseddel</span>
+                </div>
             </div>
         </div>
 

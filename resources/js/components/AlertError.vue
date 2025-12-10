@@ -20,11 +20,11 @@ const uniqueErrors = computed(() => Array.from(new Set(props.errors)));
         <AlertCircle class="size-4" />
         <AlertTitle>{{ title }}</AlertTitle>
         <AlertDescription>
-            <ul class="list-inside list-disc text-sm">
-                <li v-for="(error, index) in uniqueErrors" :key="index">
+            <div class="list-inside list-disc text-sm">
+                <div v-for="(error, index) in uniqueErrors" :key="index">
                     {{ error }}
-                </li>
-            </ul>
+                </div>
+            </div>
         </AlertDescription>
     </Alert>
 </template>

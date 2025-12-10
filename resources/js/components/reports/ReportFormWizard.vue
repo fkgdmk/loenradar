@@ -12,6 +12,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import ToastAlertError from '@/components/ToastAlertError.vue';
 import InputError from '@/components/InputError.vue';
 import PayslipAnonymizer from '@/components/PayslipAnonymizer.vue';
+import { Spinner } from '@/components/ui/spinner';
 import { login } from '@/routes';
 import { 
     FileText, 
@@ -223,8 +224,10 @@ const handleSubmit = () => {
                     <span v-else-if="rf.currentStep.value === 2">
                         Beskriv dit ansvarsniveau og vælg dine færdigheder
                     </span>
-                    <div v-else-if="!rf.isDocumentUploaded.value">
-                        Upload din lønseddel og anonymiser den ved at strege sensitive data over direkte i browseren. <div class="mt-2">Vi gemmer kun den anonymiserede version.</div>
+                    <div v-else-if="!rf.isDocumentUploaded.value" class="space-y-2">
+                        <div>Upload lønseddel der er maks. 1 år gammel.</div>
+                        <div>Anonymiser lønseddelen ved at strege sensitive data over direkte i browseren.</div>
+                        <div>Vi gemmer kun den anonymiserede version.</div>
                     </div>
                     <span v-else>
                         Gennemgå dine valg og {{ showAuthPrompt ? 'opret en konto for at se din rapport' : 'generer din rapport' }}
@@ -423,8 +426,13 @@ const handleSubmit = () => {
                         <div v-if="rf.uploadedFile.value" class="mt-2">
                             <div v-if="!rf.showAnonymizer.value" class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg border p-4">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
-                                    <div v-if="rf.uploadedFilePreview.value" class="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded flex-shrink-0">
+                                    <div v-if="rf.uploadedFilePreview.value" class="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded flex-shrink-0 relative">
                                         <img :src="rf.uploadedFilePreview.value" alt="Preview" class="h-full w-full object-cover" />
+                                        <!-- Analysis loader overlay -->
+                                        <div v-if="rf.isAnalyzing.value" class="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded">
+                                            <Spinner class="size-6 text-primary" />
+                                            <span class="text-sm font-medium text-foreground">Analyserer lønseddel</span>
+                                        </div>
                                     </div>
                                     <FileText v-else class="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground flex-shrink-0" />
                                     <div class="flex-1 min-w-0">
@@ -462,6 +470,7 @@ const handleSubmit = () => {
                             <div v-if="rf.showAnonymizer.value && rf.fileToAnonymize.value" class="mt-4">
                                 <PayslipAnonymizer
                                     :file="rf.fileToAnonymize.value"
+                                    :is-analyzing="rf.isAnalyzing.value"
                                     @save="rf.handleAnonymizedImage"
                                     @cancel="rf.cancelAnonymizer"
                                 />
@@ -470,8 +479,13 @@ const handleSubmit = () => {
                         <div v-else-if="rf.persistedDocument.value" class="mt-2">
                             <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-lg border p-4">
                                 <div class="flex items-center gap-4 flex-1 min-w-0">
-                                    <div v-if="rf.persistedDocument.value.preview_url" class="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded flex-shrink-0">
+                                    <div v-if="rf.persistedDocument.value.preview_url" class="h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded flex-shrink-0 relative">
                                         <img :src="rf.persistedDocument.value.preview_url" alt="Preview" class="h-full w-full object-cover" />
+                                        <!-- Analysis loader overlay -->
+                                        <div v-if="rf.isAnalyzing.value" class="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded">
+                                            <Spinner class="size-6 text-primary" />
+                                            <span class="text-sm font-medium text-foreground">Analyserer lønseddel</span>
+                                        </div>
                                     </div>
                                     <FileText v-else class="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground flex-shrink-0" />
                                     <div class="flex-1 min-w-0">
@@ -552,6 +566,7 @@ const handleSubmit = () => {
                             <div v-if="rf.showAnonymizer.value && rf.fileToAnonymize.value" class="mt-4">
                                 <PayslipAnonymizer
                                     :file="rf.fileToAnonymize.value"
+                                    :is-analyzing="rf.isAnalyzing.value"
                                     @save="rf.handleAnonymizedImage"
                                     @cancel="rf.cancelAnonymizer"
                                 />

@@ -89,11 +89,11 @@ onMounted(() => {
                     <AlertCircle class="h-4 w-4" />
                     <AlertTitle class="font-semibold">{{ title }}</AlertTitle>
                     <AlertDescription>
-                        <ul class="list-inside list-disc text-sm">
-                            <li v-for="(error, index) in uniqueErrors" :key="index">
+                        <div class="list-inside list-disc text-sm">
+                            <div v-for="(error, index) in uniqueErrors" :key="index">
                                 {{ error }}
-                            </li>
-                        </ul>
+                            </div>
+                        </div>
                     </AlertDescription>
                     <button 
                         @click="dismissAlert" 

@@ -16,7 +16,7 @@ use App\Services\FindMatchingPayslips;
 use App\Services\ReportConclusionGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -1174,8 +1174,10 @@ class ReportsController extends Controller
                 // Delete the document
                 $payslip->clearMediaCollection('documents');
                 
-                // Delete the payslip if it has no other data
-                // For now, we'll keep the payslip record but remove the document
+                $report->update([
+                    'uploaded_payslip_id' => null,
+                ]);
+                $payslip->delete();
             }
 
             DB::commit();
@@ -1220,111 +1222,6 @@ class ReportsController extends Controller
         ]);
     }
 
-    /**
-     * Analyze and save anonymized payslip image for a report.
-     */
-    public function analyzePayslip(Request $request, Report $report)
-    {
-        $guestToken = $request->session()->get('guest_report_token');
-        
-        // Verify access to the report
-        if ($report->status !== 'draft') {
-            return back()->withErrors(['error' => 'Rapport kan ikke opdateres.']);
-        }
-        
-        if ($request->user()) {
-            if ($report->user_id !== $request->user()->id && $report->guest_token !== $guestToken) {
-                return back()->withErrors(['error' => 'Adgang nægtet.']);
-            }
-        } else {
-            if ($report->guest_token !== $guestToken) {
-                return back()->withErrors(['error' => 'Adgang nægtet.']);
-            }
-        }
-
-        // Throttle: 3 uploads per minute
-        $key = 'analyze-payslip:' . ($request->user()?->id ?? $request->ip());
-        if (RateLimiter::tooManyAttempts($key, 3)) {
-            $seconds = RateLimiter::availableIn($key);
-            return back()->withErrors([
-                'error' => "Du har uploadet for mange filer. Prøv igen om {$seconds} sekunder."
-            ]);
-        }
-
-        // Throttle: 5 uploads per half hour
-        $keyHalfHour = 'analyze-payslip-halfhour:' . ($request->user()?->id ?? $request->ip());
-        if (RateLimiter::tooManyAttempts($keyHalfHour, 5)) {
-            $seconds = RateLimiter::availableIn($keyHalfHour);
-            $minutes = ceil($seconds / 60);
-            return back()->withErrors([
-                'error' => "Du har uploadet for mange filer. Prøv igen om {$minutes} minut(ter)."
-            ]);
-        }
-
-        $request->validate([
-            'document' => 'required|file|mimes:png,jpg,jpeg|max:10240', // 10MB max
-        ], [
-            'document.required' => 'Upload venligst din lønseddel',
-            'document.file' => 'Dokumentet skal være en fil',
-            'document.mimes' => 'Dokumentet skal være et billede (PNG eller JPG)',
-            'document.max' => 'Dokumentet må maksimalt være 10MB',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            // Get gender from filters
-            $gender = $report->filters['gender'] ?? null;
-
-            // Check if payslip already exists for this report
-            $payslip = $report->uploadedPayslip;
-            
-            if ($payslip) {
-                // Delete existing document
-                $payslip->clearMediaCollection('documents');
-            } else {
-                // Create new payslip
-                $payslip = Payslip::create([
-                    'job_title_id' => $report->job_title_id,
-                    'area_of_responsibility_id' => $report->area_of_responsibility_id,
-                    'experience' => $report->experience,
-                    'gender' => $gender,
-                    'region_id' => $report->region_id,
-                    'responsibility_level_id' => $report->filters['responsibility_level_id'] ?? null,
-                    'team_size' => $report->filters['team_size'] ?? null,
-                    'uploader_id' => $request->user()?->id, // null for guests
-                    'uploaded_at' => now(),
-                    'source' => $request->user() ? 'user_upload' : 'guest_upload',
-                ]);
-
-                // Update report with payslip
-                $report->update([
-                    'uploaded_payslip_id' => $payslip->id,
-                ]);
-            }
-
-            // Upload new document
-            $payslip->addMediaFromRequest('document')
-                ->toMediaCollection('documents');
-
-            DB::commit();
-
-            // Register rate limiter hits only after successful upload
-            RateLimiter::hit($key, 60); // 60 seconds = 1 minute
-            RateLimiter::hit($keyHalfHour, 1800); // 1800 seconds = 30 minutes
-
-            // Redirect to the same page (get-started or reports.create) with report_id to maintain state
-            if ($request->user()) {
-                return redirect()->route('reports.create', ['report_id' => $report->id])
-                    ->with('success', 'Lønseddel gemt succesfuldt');
-            } else {
-                return redirect()->route('get-started', ['report_id' => $report->id])
-                    ->with('success', 'Lønseddel gemt succesfuldt');
-            }
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => 'Der opstod en fejl ved gemning af lønsedlen.']);
-        }
-    }
 
     private function calculatePercentile($sortedData, $percentile)
     {

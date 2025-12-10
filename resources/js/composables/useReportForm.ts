@@ -86,6 +86,9 @@ export function useReportForm(options: UseReportFormOptions) {
     // Anonymizer state
     const showAnonymizer = ref(false);
     const fileToAnonymize = ref<File | null>(null);
+    
+    // Analysis loading state
+    const isAnalyzing = ref(false);
 
     // Search state for skills
     const skillSearch = ref('');
@@ -290,10 +293,14 @@ export function useReportForm(options: UseReportFormOptions) {
                 document: anonymizedFile,
             });
 
+            // Set loading state
+            isAnalyzing.value = true;
+
             analyzeForm.post(analyzeUrl, {
                 forceFormData: true,
                 preserveScroll: true,
                 onSuccess: () => {
+                    isAnalyzing.value = false;
                     showAnonymizer.value = false;
                     fileToAnonymize.value = null;
                     setUploadedFile(anonymizedFile);
@@ -303,6 +310,7 @@ export function useReportForm(options: UseReportFormOptions) {
                     }
                 },
                 onError: (errors: Record<string, string>) => {
+                    isAnalyzing.value = false;
                     console.error('Fejl ved upload af anonymiseret lønseddel:', errors);
                     setStep3Errors(errors);
                     
@@ -699,6 +707,7 @@ export function useReportForm(options: UseReportFormOptions) {
         persistedDocument,
         showAnonymizer,
         fileToAnonymize,
+        isAnalyzing,
         
         // Skills
         selectedSkills,

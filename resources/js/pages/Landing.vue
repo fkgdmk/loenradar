@@ -453,7 +453,7 @@ onMounted(() => {
                     <div class="mx-auto max-w-2xl text-center mb-16">
                         <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-4">
                             <Zap class="size-4" />
-                            Kom igang
+                            Kom i gang
                         </div>
                         <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-display">
                             Tre simple trin

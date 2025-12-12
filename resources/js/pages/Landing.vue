@@ -52,11 +52,11 @@ const faqs = [
     },
     {
         question: "Er det gratis?",
-        answer: "Ja, det er 100% gratis at få lavet en lønrapport."
+        answer: "Ja, det er 100% gratis. Det eneste vi kræver er, at du bidrager til statistikken ved at uploade din lønseddel."
     },
     {
         question: "Hvordan sikrer I, at tallene er rigtige?",
-        answer: "Vi bruger en kombination af AI-teknologi og manuelle processer. Vores AI starter med at aflæste tallene og derefter gennemgår vi dem for at sikre, at de er korrekte. Derudover sammenligner vi løbende med offentlige lønstatistikker for at sikre, at tallene stemmer overens med markedet. Hvis der er noget der ikke stemmer, godkender vi det ikke."
+        answer: "Vi bruger en kombination af AI-teknologi og manuelle processer. Vores AI starter med at aflæse tallene og derefter gennemgår vi dem for at sikre, at de er korrekte. Derudover sammenligner vi med offentlige lønstatistikker for at sikre, at tallene stemmer overens med markedet. Hvis der er noget der ikke stemmer, godkender vi det ikke."
     }
 ];
 

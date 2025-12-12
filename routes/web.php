@@ -9,6 +9,11 @@ Route::get('/', [App\Http\Controllers\LandingController::class, 'index'])->name(
 
 // Guest-accessible report creation flow (no auth required)
 Route::get('/get-started', [App\Http\Controllers\ReportsController::class, 'getStarted'])->name('get-started');
+
+// Social Auth Routes
+Route::get('auth/{provider}', [App\Http\Controllers\SocialAuthController::class, 'redirect'])->name('social.redirect');
+Route::get('auth/{provider}/callback', [App\Http\Controllers\SocialAuthController::class, 'callback'])->name('social.callback');
+
 Route::post('/reports/guest/job-details', [App\Http\Controllers\ReportsController::class, 'storeGuestJobDetails'])->name('reports.storeGuestJobDetails');
 Route::patch('/reports/guest/{report}/job-details', [App\Http\Controllers\ReportsController::class, 'updateGuestJobDetails'])->name('reports.updateGuestJobDetails');
 Route::patch('/reports/guest/competencies', [App\Http\Controllers\ReportsController::class, 'updateGuestCompetencies'])->name('reports.updateGuestCompetencies');

@@ -2,11 +2,11 @@
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
+import SSOLogin from '@/components/SSOLogin.vue';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
@@ -22,7 +22,6 @@ defineProps<{
 <template>
     <AuthBase
         title="Log in to your account"
-        description="Enter your email and password below to log in"
     >
         <Head title="Log in" />
 
@@ -32,6 +31,8 @@ defineProps<{
         >
             {{ status }}
         </div>
+
+        <SSOLogin divider-text="Eller" />
 
         <Form
             v-bind="store.form()"
@@ -79,16 +80,9 @@ defineProps<{
                     <InputError :message="errors.password" />
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <Label for="remember" class="flex items-center space-x-3">
-                        <Checkbox id="remember" name="remember" :tabindex="3" />
-                        <span>Remember me</span>
-                    </Label>
-                </div>
-
                 <Button
                     type="submit"
-                    class="mt-4 w-full"
+                    class="w-full"
                     :tabindex="4"
                     :disabled="processing"
                     data-test="login-button"

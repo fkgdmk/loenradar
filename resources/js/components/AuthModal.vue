@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
 import InputError from '@/components/InputError.vue';
+import SSOLogin from '@/components/SSOLogin.vue';
 import { store as loginStore } from '@/routes/login';
 import { store as registerStore } from '@/routes/register';
 
@@ -120,6 +121,10 @@ const handleRegister = () => {
                 <DialogTitle>{{ title }}</DialogTitle>
                 <DialogDescription>{{ description }}</DialogDescription>
             </DialogHeader>
+
+            <div class="mt-4">
+                <SSOLogin divider-text="Eller" />
+            </div>
 
             <!-- Tabs -->
             <div class="flex border-b border-border mb-6">
@@ -252,6 +257,7 @@ const handleRegister = () => {
                     Opret konto
                 </Button>
             </form>
+
         </DialogContent>
     </Dialog>
 </template>

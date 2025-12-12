@@ -17,8 +17,7 @@ import {
     X,
     Sparkles,
     Lock,
-    Eye,
-    FileText
+    BadgeCheck
 } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 
@@ -35,7 +34,7 @@ const mobileMenuOpen = ref(false);
 
 // Animated counter
 const animatedCount = ref(0);
-const targetCount = 1247;
+const targetCount = 723;
 
 onMounted(() => {
     const duration = 2000;
@@ -85,9 +84,6 @@ onMounted(() => {
                     <a href="#how-it-works" class="px-4 py-2 text-sm font-medium text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent">
                         Sådan virker det
                     </a>
-                    <a href="#pricing" class="px-4 py-2 text-sm font-medium text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent">
-                        Priser
-                    </a>
                 </nav>
                 
                 <!-- Auth Buttons -->
@@ -136,9 +132,6 @@ onMounted(() => {
                     <a href="#how-it-works" class="px-4 py-3 text-sm font-medium text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent" @click="mobileMenuOpen = false">
                         Sådan virker det
                     </a>
-                    <a href="#pricing" class="px-4 py-3 text-sm font-medium text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent" @click="mobileMenuOpen = false">
-                        Priser
-                    </a>
                     <div class="flex flex-col gap-2 pt-4 mt-2 border-t border-border">
                         <template v-if="$page.props.auth.user">
                             <Button as-child class="w-full">
@@ -177,7 +170,7 @@ onMounted(() => {
                         <!-- Left Column - Text -->
                         <div class="text-center lg:text-left">
                             <!-- Floating Badge -->
-                            <div class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/10 to-orange-500/10 border border-primary/20 px-4 py-2 text-sm font-medium mb-8 animate-fade-in-up">
+                            <div class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/10 to-orange-500/10 border border-primary/20 px-4 py-2 text-sm font-medium mb-8">
                                 <span class="flex size-2">
                                     <span class="animate-ping absolute inline-flex size-2 rounded-full bg-primary opacity-75"></span>
                                     <span class="relative inline-flex rounded-full size-2 bg-primary"></span>
@@ -188,7 +181,7 @@ onMounted(() => {
                             </div>
                             
                             <!-- Headline -->
-                            <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 font-display animate-fade-in-up animation-delay-100">
+                            <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 font-display">
                                 Ved du hvad din løn
                                 <span class="relative">
                                     <span class="bg-gradient-to-r from-primary via-orange-500 to-rose-500 bg-clip-text text-transparent"> burde være?</span>
@@ -198,13 +191,13 @@ onMounted(() => {
                                 </span>
                             </h1>
                             
-                            <p class="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-10 animate-fade-in-up animation-delay-200">
-                                Upload din lønseddel og få indsigt i hvad andre med samme jobtitel tjener. 
-                                <span class="text-foreground font-medium">Anonym, sikker og gratis.</span>
+                            <p class="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-10">
+                                Upload din lønseddel og få adgang til Danmarks eneste lønstatistik baseret på verificerede lønsedler. 
+                                <span class="text-foreground font-medium">Vi gemmer aldrig følsomme oplysninger – kun dataen.</span>
                             </p>
                             
                             <!-- CTA -->
-                            <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center animate-fade-in-up animation-delay-300">
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center">
                                 <Button as-child size="lg" class="text-base px-8 h-14 shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-shadow">
                                     <Link :href="getStarted()">
                                         Kom i gang gratis
@@ -219,24 +212,24 @@ onMounted(() => {
                             </div>
                             
                             <!-- Trust badges -->
-                            <div class="flex flex-wrap justify-center lg:justify-start gap-6 mt-12 animate-fade-in-up animation-delay-400">
-                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-sm font-medium">
+                            <div class="flex flex-wrap justify-center lg:justify-start gap-6 mt-12">
+                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-black text-sm font-medium">
+                                    <TrendingUp class="size-4" />
+                                    Optimér din løn
+                                </div>
+                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-sm font-medium">
+                                    <Users class="size-4" />
+                                    Crowdsourced data
+                                </div>
+                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-sm font-medium">
                                     <Shield class="size-4" />
-                                    100% anonym
-                                </div>
-                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-sm font-medium">
-                                    <Zap class="size-4" />
-                                    Analyse på sekunder
-                                </div>
-                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-sm font-medium">
-                                    <Lock class="size-4" />
-                                    GDPR compliant
+                                    100% anonymt
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Right Column - Visual -->
-                        <div class="relative hidden lg:block animate-fade-in-up animation-delay-300">
+                        <div class="relative hidden lg:block">
                             <!-- Salary Visualization Card -->
                             <div class="relative">
                                 <!-- Main card -->
@@ -247,7 +240,7 @@ onMounted(() => {
                                                 <ChartNoAxesCombined class="size-5 text-white" />
                                             </div>
                                             <div>
-                                                <p class="font-semibold font-display">Din lønplacering</p>
+                                                <p class="font-semibold font-display">Din lønrapport</p>
                                                 <p class="text-sm text-muted-foreground">Software Engineer</p>
                                             </div>
                                         </div>
@@ -269,7 +262,7 @@ onMounted(() => {
                                                 <span class="text-xs font-medium text-green-700 dark:text-green-300">75%</span>
                                             </div>
                                             <!-- Indicator -->
-                                            <div class="absolute top-1/2 -translate-y-1/2 left-[62%] flex flex-col items-center animate-bounce-subtle">
+                                            <div class="absolute top-3/5 -translate-y-1/2 left-[62%] flex flex-col items-center animate-bounce-subtle">
                                                 <div class="size-6 rounded-full bg-primary border-4 border-background shadow-lg"></div>
                                                 <div class="mt-1 px-2 py-0.5 rounded bg-primary text-primary-foreground text-xs font-bold whitespace-nowrap">
                                                     Din løn
@@ -279,11 +272,11 @@ onMounted(() => {
                                         
                                         <div class="grid grid-cols-3 gap-4 text-center">
                                             <div class="p-3 rounded-xl bg-muted/50">
-                                                <p class="text-2xl font-bold font-display text-rose-600">38.500</p>
+                                                <p class="text-2xl font-bold font-display text-rose-600">44.500</p>
                                                 <p class="text-xs text-muted-foreground">Laveste</p>
                                             </div>
                                             <div class="p-3 rounded-xl bg-muted/50">
-                                                <p class="text-2xl font-bold font-display text-amber-600">45.000</p>
+                                                <p class="text-2xl font-bold font-display text-amber-600">52.000</p>
                                                 <p class="text-xs text-muted-foreground">Median</p>
                                             </div>
                                             <div class="p-3 rounded-xl bg-muted/50">
@@ -296,15 +289,15 @@ onMounted(() => {
                                 
                                 <!-- Floating elements -->
                                 <div class="absolute -top-6 -right-6 px-4 py-2 bg-card rounded-2xl border border-border shadow-lg flex items-center gap-2 animate-float">
-                                    <span class="text-2xl">📊</span>
+                                    <BadgeCheck class="size-5 text-primary" />
                                     <div>
-                                        <p class="text-sm font-semibold">523 datapunkter</p>
-                                        <p class="text-xs text-muted-foreground">i din branche</p>
+                                        <p class="text-sm font-semibold">Klar til lønforhandling?</p>
+                                        <p class="text-xs text-muted-foreground">Underbyg med data</p>
                                     </div>
                                 </div>
                                 
                                 <div class="absolute -bottom-4 -left-8 px-4 py-2 bg-card rounded-2xl border border-border shadow-lg flex items-center gap-2 animate-float animation-delay-2000">
-                                    <span class="text-2xl">🔒</span>
+                                    <Lock class="size-5 text-primary" />
                                     <div>
                                         <p class="text-sm font-semibold">Anonymiseret</p>
                                         <p class="text-xs text-muted-foreground">100% sikkert</p>
@@ -525,7 +518,7 @@ onMounted(() => {
             </section>
             
             <!-- CTA Section -->
-            <section id="pricing" class="py-24 md:py-32 relative overflow-hidden">
+            <section id="cta" class="py-24 md:py-32 relative overflow-hidden">
                 <!-- Gradient background -->
                 <div class="absolute inset-0 bg-gradient-to-br from-primary via-primary to-orange-600 -z-10"></div>
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnYtMmg0djJoMnY0aC0ydjJoLTR2LTJ6bTAtOGgtMnYtMmgydjJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30 -z-10"></div>
@@ -599,7 +592,6 @@ onMounted(() => {
                         <nav class="flex flex-col gap-3 text-sm text-muted-foreground">
                             <a href="#features" class="hover:text-foreground transition-colors">Funktioner</a>
                             <a href="#how-it-works" class="hover:text-foreground transition-colors">Sådan virker det</a>
-                            <a href="#pricing" class="hover:text-foreground transition-colors">Priser</a>
                         </nav>
                     </div>
                     

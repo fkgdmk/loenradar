@@ -218,8 +218,7 @@ onMounted(() => {
                             </h1>
                             
                             <p class="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-10">
-                                Upload din lønseddel og få en skræddersyet lønrapport baseret på verificerede lønsedler. 
-                                <span class="text-foreground font-medium">Vi gemmer aldrig følsomme oplysninger – kun dataen.</span>
+                                Få en skræddersyet lønrapport baseret på verificerede lønsedler. Upload blot din lønseddel – vi gemmer kun tallene, aldrig din identitet.
                             </p>
                             
                             <!-- CTA -->

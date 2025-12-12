@@ -193,11 +193,6 @@ onMounted(() => {
                 <div class="absolute inset-0 -z-10">
                     <!-- Grid pattern -->
                     <div class="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)]"></div>
-                    
-                    <!-- Gradient orbs -->
-                    <div class="absolute top-20 left-10 w-72 h-72 bg-primary/30 rounded-full blur-[100px] animate-blob"></div>
-                    <div class="absolute top-40 right-10 w-96 h-96 bg-orange-400/20 rounded-full blur-[100px] animate-blob animation-delay-2000"></div>
-                    <div class="absolute -bottom-20 left-1/3 w-80 h-80 bg-rose-400/20 rounded-full blur-[100px] animate-blob animation-delay-4000"></div>
                 </div>
                 
                 <div class="container mx-auto px-4 md:px-6 py-20">
@@ -366,8 +361,8 @@ onMounted(() => {
                     <!-- Bento Grid -->
                     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                         <!-- Large Feature Card -->
-                        <div class="md:col-span-2 lg:col-span-2 group relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-8 transition-all hover:shadow-2xl hover:shadow-primary/10">
-                            <div class="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10 group-hover:bg-primary/20 transition-colors"></div>
+                        <div class="md:col-span-2 lg:col-span-2 group relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/5 via-primary/5 to-transparent border border-primary/10 p-8 transition-all hover:shadow-2xl hover:shadow-primary/5">
+                            <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 group-hover:bg-primary/10 transition-colors"></div>
                             <div class="flex flex-col h-full">
                                 <div class="mb-6 inline-flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-white shadow-lg shadow-primary/30">
                                     <Upload class="size-7" />
@@ -379,7 +374,7 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-muted/40 border border-border/50 p-6 transition-all hover:shadow-xl hover:border-primary/40 hover:shadow-primary/5 hover:-translate-y-1">
                             <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
                                 <Shield class="size-6" />
                             </div>
@@ -389,7 +384,7 @@ onMounted(() => {
                             </p>
                         </div>
                         
-                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-muted/40 border border-border/50 p-6 transition-all hover:shadow-xl hover:border-primary/40 hover:shadow-primary/5 hover:-translate-y-1">
                             <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-green-500/10 text-green-500">
                                 <BadgeCheck class="size-6" />
                             </div>
@@ -400,7 +395,7 @@ onMounted(() => {
                         </div>
 
                         <!-- Small Feature Cards -->
-                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-muted/40 border border-border/50 p-6 transition-all hover:shadow-xl hover:border-primary/40 hover:shadow-primary/5 hover:-translate-y-1">
                             <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
                                 <ChartNoAxesCombined class="size-6" />
                             </div>
@@ -410,7 +405,7 @@ onMounted(() => {
                             </p>
                         </div>
                         
-                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-card to-muted/40 border border-border/50 p-6 transition-all hover:shadow-xl hover:border-primary/40 hover:shadow-primary/5 hover:-translate-y-1">
                             <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
                                 <BriefcaseBusiness class="size-6" />
                             </div>
@@ -431,7 +426,7 @@ onMounted(() => {
                         </div>
                         
                         <!-- Wide Feature Card -->
-                        <div class="md:col-span-2 group relative overflow-hidden rounded-3xl bg-gradient-to-r from-card to-muted/30 border border-border p-6 md:p-8 transition-all hover:shadow-xl">
+                        <div class="md:col-span-2 group relative overflow-hidden rounded-3xl bg-gradient-to-r from-card to-muted/30 border border-border/50 p-6 md:p-8 transition-all hover:shadow-xl hover:border-primary/20">
                             <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
                                 <div class="mb-4 md:mb-0 inline-flex size-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
                                     <Users class="size-7" />
@@ -454,7 +449,7 @@ onMounted(() => {
             </section>
             
             <!-- How it works Section -->
-            <section id="how-it-works" class="py-24 md:py-32 bg-muted/30 relative overflow-hidden">
+            <section id="how-it-works" class="py-24 md:py-32 bg-primary/[0.03] border-y border-primary/5 relative overflow-hidden">
                 <!-- Background decoration -->
                 <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-primary/5 to-orange-500/5 rounded-full blur-3xl -z-10"></div>
                 
@@ -580,7 +575,7 @@ onMounted(() => {
             <!-- CTA Section -->
             <section id="cta" class="py-24 md:py-32 relative overflow-hidden">
                 <!-- Gradient background -->
-                <div class="absolute inset-0 bg-gradient-to-br from-primary to-orange-600 -z-10"></div>
+                <div class="absolute inset-0 bg-gradient-to-br from-orange-600 via-primary to-amber-500 -z-10"></div>
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnYtMmg0djJoMnY0aC0ydjJoLTR2LTJ6bTAtOGgtMnYtMmgydjJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30 -z-10"></div>
                 
                 <div class="container mx-auto px-4 md:px-6">
@@ -688,25 +683,6 @@ body {
 }
 
 /* Animations */
-@keyframes blob {
-    0%, 100% {
-        transform: translate(0, 0) scale(1);
-    }
-    25% {
-        transform: translate(20px, -30px) scale(1.1);
-    }
-    50% {
-        transform: translate(-20px, 20px) scale(0.9);
-    }
-    75% {
-        transform: translate(30px, 10px) scale(1.05);
-    }
-}
-
-.animate-blob {
-    animation: blob 10s ease-in-out infinite;
-}
-
 @keyframes float {
     0%, 100% {
         transform: translateY(0);

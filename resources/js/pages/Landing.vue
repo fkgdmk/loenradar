@@ -23,20 +23,16 @@ import {
 } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 
-withDefaults(
-    defineProps<{
-        canRegister: boolean;
-    }>(),
-    {
-        canRegister: true,
-    },
-);
+const props = defineProps<{
+    canRegister: boolean;
+    payslipCount: number;
+}>();
 
 const mobileMenuOpen = ref(false);
 
 // Animated counter
 const animatedCount = ref(0);
-const targetCount = 723;
+const targetCount = props.payslipCount;
 
 // FAQ State
 const openFaqIndex = ref<number | null>(null);

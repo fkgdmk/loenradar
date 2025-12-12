@@ -4,11 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
-Route::get('/', function () {
-    return Inertia::render('Landing', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
-})->name('home');
+Route::get('/', [App\Http\Controllers\LandingController::class, 'index'])->name('home');
 
 
 // Guest-accessible report creation flow (no auth required)

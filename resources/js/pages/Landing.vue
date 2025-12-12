@@ -393,7 +393,7 @@ onMounted(() => {
                             </div>
                             <h3 class="text-xl font-bold mb-2 font-display">Valideret af mennesker</h3>
                             <p class="text-muted-foreground">
-                                Vi valider hver eneste lønseddel for at sikre, at dataen er ægte, så statistikken er fri for fejl og snyd.
+                                Vi validerer hver eneste lønseddel for at sikre, at dataen er ægte, så statistikken er fri for fejl og snyd.
                             </p>
                         </div>
 

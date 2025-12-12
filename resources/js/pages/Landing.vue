@@ -239,15 +239,15 @@ onMounted(() => {
                             
                             <!-- Trust badges -->
                             <div class="flex flex-wrap justify-center lg:justify-start gap-6 mt-12">
-                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-black text-sm font-medium">
+                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-black text-sm font-medium leading-none">
                                     <TrendingUp class="size-4" />
                                     Optimér din løn
                                 </div>
-                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-sm font-medium">
+                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-sm font-medium leading-none">
                                     <Users class="size-4" />
                                     Crowdsourced data
                                 </div>
-                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-sm font-medium">
+                                <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-border/50 text-sm font-medium leading-none">
                                     <Shield class="size-4" />
                                     100% anonymt
                                 </div>

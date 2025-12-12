@@ -17,7 +17,8 @@ import {
     X,
     Sparkles,
     Lock,
-    BadgeCheck
+    BadgeCheck,
+    BriefcaseBusiness
 } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 
@@ -310,7 +311,7 @@ onMounted(() => {
             </section>
 
             <!-- Marquee Section -->
-            <section class="py-8 border-y border-border bg-muted/30 overflow-hidden">
+            <!-- <section class="py-8 border-y border-border bg-muted/30 overflow-hidden">
                 <div class="flex animate-marquee">
                     <div class="flex items-center gap-8 px-4 whitespace-nowrap">
                         <span class="text-muted-foreground font-medium">🎯 Præcise løndata</span>
@@ -341,7 +342,7 @@ onMounted(() => {
                         <span class="text-primary">•</span>
                     </div>
                 </div>
-            </section>
+            </section> -->
             
             <!-- Features Section - Bento Grid -->
             <section id="features" class="py-24 md:py-32">
@@ -352,11 +353,11 @@ onMounted(() => {
                             Funktioner
                         </div>
                         <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-display">
-                            Alt hvad du behøver for at
-                            <span class="bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">forstå din løn</span>
+                            Få en
+                            <span class="bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">skræddersyet lønanalyse</span>
                         </h2>
                         <p class="text-lg text-muted-foreground">
-                            Få indsigt i lønstatistikker og sammenlign din løn med andre i din branche.
+                            Få indsigt i lønstatistikker og sammenlign din løn med andre i din stilling.
                         </p>
                     </div>
                     
@@ -369,49 +370,61 @@ onMounted(() => {
                                 <div class="mb-6 inline-flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-white shadow-lg shadow-primary/30">
                                     <Upload class="size-7" />
                                 </div>
-                                <h3 class="text-2xl font-bold mb-3 font-display">Upload lønseddel</h3>
+                                <h3 class="text-2xl font-bold mb-3 font-display">Upload din lønseddel</h3>
                                 <p class="text-muted-foreground text-lg flex-1">
-                                    Træk og slip din lønseddel - vores AI ekstraherer automatisk alle relevante data på få sekunder. Sikkert og anonymt.
+                                    Træk og slip din lønseddel. Du kan <span class="font-bold">overstrege navn, CPR og andre følsomme data direkte i browseren</span>, før vores AI udtrækker tallene.
                                 </p>
-                                <div class="mt-6 flex items-center gap-4">
-                                    <div class="flex -space-x-2">
-                                        <div class="size-8 rounded-full bg-gradient-to-br from-rose-400 to-rose-500 border-2 border-background flex items-center justify-center text-white text-xs">JK</div>
-                                        <div class="size-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 border-2 border-background flex items-center justify-center text-white text-xs">ML</div>
-                                        <div class="size-8 rounded-full bg-gradient-to-br from-green-400 to-green-500 border-2 border-background flex items-center justify-center text-white text-xs">AS</div>
-                                    </div>
-                                    <span class="text-sm text-muted-foreground">500+ har uploadet denne uge</span>
-                                </div>
                             </div>
                         </div>
-                        
-                        <!-- Small Feature Cards -->
-                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
-                            <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
-                                <ChartNoAxesCombined class="size-6" />
-                            </div>
-                            <h3 class="text-xl font-bold mb-2 font-display">Se statistikker</h3>
-                            <p class="text-muted-foreground">
-                                Detaljeret indsigt i hvad andre med samme jobtitel og erfaring tjener.
-                            </p>
-                        </div>
-                        
-                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
-                            <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-green-500/10 text-green-500">
-                                <TrendingUp class="size-6" />
-                            </div>
-                            <h3 class="text-xl font-bold mb-2 font-display">Sammenlign</h3>
-                            <p class="text-muted-foreground">
-                                Se hvordan din løn placerer sig i forhold til gennemsnittet for din branche.
-                            </p>
-                        </div>
-                        
+
                         <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
                             <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
                                 <Shield class="size-6" />
                             </div>
                             <h3 class="text-xl font-bold mb-2 font-display">Fuld anonymitet</h3>
                             <p class="text-muted-foreground">
-                                Dine data behandles 100% anonymt. Vi deler aldrig personlige oplysninger.
+                               Dine data behandles fortroligt. Vi gemmer aldrig personfølsomme oplysninger, og du indgår som en helt anonym del af statistikken.
+                            </p>
+                        </div>
+                        
+                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
+                            <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-green-500/10 text-green-500">
+                                <BadgeCheck class="size-6" />
+                            </div>
+                            <h3 class="text-xl font-bold mb-2 font-display">Valideret af mennesker</h3>
+                            <p class="text-muted-foreground">
+                                Vi valider hver eneste lønseddel for at sikre, at dataen er ægte, så statistikken er fri for fejl og snyd.
+                            </p>
+                        </div>
+
+                        <!-- Small Feature Cards -->
+                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
+                            <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
+                                <ChartNoAxesCombined class="size-6" />
+                            </div>
+                            <h3 class="text-xl font-bold mb-2 font-display">Din personlige lønrapport</h3>
+                            <p class="text-muted-foreground">
+                                Du får en unik analyse. Se præcis, hvordan du placerer dig i forhold til andre med samme titel, erfaring og færdigheder.
+                            </p>
+                        </div>
+                        
+                        <div class="group relative overflow-hidden rounded-3xl bg-card border border-border p-6 transition-all hover:shadow-xl hover:border-primary/30 hover:-translate-y-1">
+                            <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <BriefcaseBusiness class="size-6" />
+                            </div>
+                            <h3 class="text-xl font-bold mb-2 font-display">Jobopslag med løn</h3>
+                            <p class="text-muted-foreground">
+                                Vi scanner markedet for aktuelle jobopslag, der skilter med lønnen. Du får indsigt i hvad virksomheder vil betale for din stilling lige nu.   
+                            </p>
+                        </div>
+
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-b from-indigo-50/60 to-transparent dark:from-indigo-900/10 dark:to-transparent border border-indigo-100 dark:border-indigo-800/30 p-6 transition-all hover:shadow-xl hover:border-indigo-500/30 hover:-translate-y-1">
+                            <div class="mb-4 inline-flex size-12 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-500">
+                                <TrendingUp class="size-6" />
+                            </div>
+                            <h3 class="text-xl font-bold mb-2 font-display">Stærkere lønforhandling</h3>
+                            <p class="text-muted-foreground">
+                                Kom forberedt til næste lønforhandling. Få konkrete datapunkter, der dokumenterer din markedsværdi sort på hvidt.
                             </p>
                         </div>
                         
@@ -422,7 +435,7 @@ onMounted(() => {
                                     <Users class="size-7" />
                                 </div>
                                 <div class="flex-1">
-                                    <h3 class="text-xl font-bold mb-2 font-display">Fællesskabsdata</h3>
+                                    <h3 class="text-xl font-bold mb-2 font-display">Crowdsourced</h3>
                                     <p class="text-muted-foreground">
                                         Jo flere der bidrager, jo bedre bliver statistikkerne for alle. Vær med til at skabe gennemsigtighed i det danske arbejdsmarked.
                                     </p>
@@ -430,6 +443,7 @@ onMounted(() => {
                                 <div class="flex flex-col items-center justify-center p-4 rounded-2xl bg-muted/50">
                                     <span class="text-3xl font-bold font-display text-primary">{{ animatedCount.toLocaleString('da-DK') }}</span>
                                     <span class="text-sm text-muted-foreground">lønsedler</span>
+                                    <span class="text-sm text-muted-foreground">analyseret</span>
                                 </div>
                             </div>
                         </div>

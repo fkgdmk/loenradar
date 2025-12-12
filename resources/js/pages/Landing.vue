@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { dashboard, login, register, getStarted } from '@/routes';
+import { dashboard, login, getStarted } from '@/routes';
 import { Head, Link } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { 
     ChartNoAxesCombined, 
@@ -18,7 +17,9 @@ import {
     Sparkles,
     Lock,
     BadgeCheck,
-    BriefcaseBusiness
+    BriefcaseBusiness,
+    ChevronDown,
+    HelpCircle
 } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 
@@ -36,6 +37,36 @@ const mobileMenuOpen = ref(false);
 // Animated counter
 const animatedCount = ref(0);
 const targetCount = 723;
+
+// FAQ State
+const openFaqIndex = ref<number | null>(null);
+
+const faqs = [
+    {
+        question: "Er det virkelig 100% anonymt?",
+        answer: "Ja. Du kan selv overstrege dine personlige oplysninger direkte i browseren, inden du uploader lønsedlen, så vi aldrig ser dem. Vi gemmer derfor aldrig dit navn, CPR-nummer eller adresse. "
+    },
+    {
+        question: "Hvad sker der med min lønseddel efter upload?",
+        answer: "Vores AI aflæser tallene (løn, pension, tillæg) og konverterer dem til data. Vi gennemgår derefter lønsedlen for at sikre, at den er ægte og at dataen stemmer overens med de andre oplyste oplysninger. Vi gemmer kun de anonyme tal til statistikken."
+    },
+    {
+        question: "Hvorfor skal jeg uploade min lønseddel?",
+        answer: "For at sikre valid data. I modsætning til andre lønstatistikker, der bygger på gætværk, bruger vi kun verificerede tal. Din lønseddel er din \"billet\" til at se statistikken."
+    },
+    {
+        question: "Er det gratis?",
+        answer: "Ja, det er 100% gratis at få lavet en lønrapport."
+    },
+    {
+        question: "Hvordan sikrer I, at tallene er rigtige?",
+        answer: "Vi bruger en kombination af AI-teknologi og manuelle processer. Vores AI starter med at aflæste tallene og derefter gennemgår vi dem for at sikre, at de er korrekte. Derudover sammenligner vi løbende med offentlige lønstatistikker for at sikre, at tallene stemmer overens med markedet. Hvis der er noget der ikke stemmer, godkender vi det ikke."
+    }
+];
+
+const toggleFaq = (index: number) => {
+    openFaqIndex.value = openFaqIndex.value === index ? null : index;
+};
 
 onMounted(() => {
     const duration = 2000;
@@ -79,11 +110,14 @@ onMounted(() => {
                 
                 <!-- Desktop Navigation -->
                 <nav class="hidden md:flex items-center gap-1">
-                    <a href="#features" class="px-4 py-2 text-sm font-medium text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent">
+                    <a href="#features" class="px-4 py-2 text-sm font-bold text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent">
                         Funktioner
                     </a>
-                    <a href="#how-it-works" class="px-4 py-2 text-sm font-medium text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent">
+                    <a href="#how-it-works" class="px-4 py-2 text-sm font-bold text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent">
                         Sådan virker det
+                    </a>
+                    <a href="#faq" class="px-4 py-2 text-sm font-bold text-muted-foreground rounded-lg transition-all hover:text-foreground hover:bg-accent">
+                        FAQ
                     </a>
                 </nav>
                 
@@ -143,7 +177,7 @@ onMounted(() => {
                             <Button as-child variant="outline" class="w-full">
                                 <Link :href="login()">Log ind</Link>
                             </Button>
-                            <Button as-child class="w-full">
+                            <Button as-child class="w-full font-bold">
                                 <Link :href="getStarted()">Kom i gang gratis</Link>
                             </Button>
                         </template>
@@ -193,7 +227,7 @@ onMounted(() => {
                             </h1>
                             
                             <p class="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-10">
-                                Upload din lønseddel og få adgang til Danmarks eneste lønstatistik baseret på verificerede lønsedler. 
+                                Upload din lønseddel og få en skræddersyet lønrapport baseret på verificerede lønsedler. 
                                 <span class="text-foreground font-medium">Vi gemmer aldrig følsomme oplysninger – kun dataen.</span>
                             </p>
                             
@@ -242,7 +276,9 @@ onMounted(() => {
                                             </div>
                                             <div>
                                                 <p class="font-semibold font-display">Din lønrapport</p>
-                                                <p class="text-sm text-muted-foreground">Software Engineer</p>
+                                                <p class="text-sm text-muted-foreground">
+                                                    Software Developer <span class="text-xs text-muted-foreground">5 års erfaring, København</span>
+                                                </p>
                                             </div>
                                         </div>
                                         <span class="px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-sm font-medium">
@@ -309,40 +345,6 @@ onMounted(() => {
                     </div>
                 </div>
             </section>
-
-            <!-- Marquee Section -->
-            <!-- <section class="py-8 border-y border-border bg-muted/30 overflow-hidden">
-                <div class="flex animate-marquee">
-                    <div class="flex items-center gap-8 px-4 whitespace-nowrap">
-                        <span class="text-muted-foreground font-medium">🎯 Præcise løndata</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">🔐 Fuld anonymitet</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">⚡ AI-drevet analyse</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">📈 Sammenlign din løn</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">🇩🇰 Dansk løndata</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">💼 Alle brancher</span>
-                        <span class="text-primary">•</span>
-                    </div>
-                    <div class="flex items-center gap-8 px-4 whitespace-nowrap">
-                        <span class="text-muted-foreground font-medium">🎯 Præcise løndata</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">🔐 Fuld anonymitet</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">⚡ AI-drevet analyse</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">📈 Sammenlign din løn</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">🇩🇰 Dansk løndata</span>
-                        <span class="text-primary">•</span>
-                        <span class="text-muted-foreground font-medium">💼 Alle brancher</span>
-                        <span class="text-primary">•</span>
-                    </div>
-                </div>
-            </section> -->
             
             <!-- Features Section - Bento Grid -->
             <section id="features" class="py-24 md:py-32">
@@ -357,7 +359,7 @@ onMounted(() => {
                             <span class="bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent">skræddersyet lønanalyse</span>
                         </h2>
                         <p class="text-lg text-muted-foreground">
-                            Få indsigt i lønstatistikker og sammenlign din løn med andre i din stilling.
+                            Få indsigt i lønstatistikker og sammenlign din løn med andre i samme stilling.
                         </p>
                     </div>
                     
@@ -372,7 +374,7 @@ onMounted(() => {
                                 </div>
                                 <h3 class="text-2xl font-bold mb-3 font-display">Upload din lønseddel</h3>
                                 <p class="text-muted-foreground text-lg flex-1">
-                                    Træk og slip din lønseddel. Du kan <span class="font-bold">overstrege navn, CPR og andre følsomme data direkte i browseren</span>, før vores AI udtrækker tallene.
+                                    Træk og slip din lønseddel. Du kan anonymisere den ved at <span class="font-bold">overstrege navn, CPR og andre følsomme data direkte i browseren</span>, før vores AI udtrækker tallene.
                                 </p>
                             </div>
                         </div>
@@ -404,7 +406,7 @@ onMounted(() => {
                             </div>
                             <h3 class="text-xl font-bold mb-2 font-display">Din personlige lønrapport</h3>
                             <p class="text-muted-foreground">
-                                Du får en unik analyse. Se præcis, hvordan du placerer dig i forhold til andre med samme titel, erfaring og færdigheder.
+                                Du får en unik analyse. Se præcis, hvordan du placerer dig i forhold til andre med samme titel, erfaring og kompetencer.
                             </p>
                         </div>
                         
@@ -460,13 +462,13 @@ onMounted(() => {
                     <div class="mx-auto max-w-2xl text-center mb-16">
                         <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-4">
                             <Zap class="size-4" />
-                            Kom i gang
+                            Kom igang
                         </div>
                         <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-display">
                             Tre simple trin
                         </h2>
                         <p class="text-lg text-muted-foreground">
-                            Fra upload til indsigt på under et minut
+                            Fra upload til personlig lønrapport på under et minut
                         </p>
                     </div>
                     
@@ -485,9 +487,9 @@ onMounted(() => {
                                     <!-- Arrow (hidden on mobile) -->
                                     <div class="hidden md:block absolute top-10 left-full w-full h-0.5 bg-gradient-to-r from-primary to-transparent -z-10"></div>
                                     
-                                    <h3 class="text-xl font-bold mb-3 font-display">Opret gratis konto</h3>
+                                    <h3 class="text-xl font-bold mb-3 font-display">Indtast oplysninger</h3>
                                     <p class="text-muted-foreground">
-                                        Tilmeld dig på få sekunder med din email. Ingen kreditkort påkrævet.
+                                        Indtast jobtitel, erfaring, område og kompetencer.
                                     </p>
                                 </div>
                             </div>
@@ -505,7 +507,7 @@ onMounted(() => {
                                     
                                     <h3 class="text-xl font-bold mb-3 font-display">Upload lønseddel</h3>
                                     <p class="text-muted-foreground">
-                                        Træk og slip din lønseddel. Vores AI gør resten automatisk.
+                                        Træk og slip lønseddel. Anonymiser den direkte i browseren.
                                     </p>
                                 </div>
                             </div>
@@ -522,7 +524,7 @@ onMounted(() => {
                                     
                                     <h3 class="text-xl font-bold mb-3 font-display">Få din rapport</h3>
                                     <p class="text-muted-foreground">
-                                        Se hvordan din løn sammenligner sig med andre i din branche.
+                                        Se hvordan din løn sammenligner sig med andre i samme stilling.
                                     </p>
                                 </div>
                             </div>
@@ -531,46 +533,84 @@ onMounted(() => {
                 </div>
             </section>
             
+            <!-- FAQ Section -->
+            <section id="faq" class="py-24 md:py-32 bg-background relative overflow-hidden">
+                <div class="container mx-auto px-4 md:px-6">
+                    <div class="mx-auto max-w-2xl text-center mb-16">
+                        <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-4">
+                            <HelpCircle class="size-4" />
+                            FAQ
+                        </div>
+                        <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-display">
+                            Ofte stillede spørgsmål
+                        </h2>
+                        <p class="text-lg text-muted-foreground">
+                            Få svar på dine spørgsmål om sikkerhed, anonymitet og hvordan LønRadar fungerer.
+                        </p>
+                    </div>
+
+                    <div class="mx-auto max-w-3xl space-y-4">
+                        <div 
+                            v-for="(faq, index) in faqs" 
+                            :key="index"
+                            class="rounded-2xl border border-border bg-card overflow-hidden transition-all duration-200"
+                            :class="{ 'border-primary/50 shadow-lg shadow-primary/5': openFaqIndex === index }"
+                        >
+                            <button 
+                                @click="toggleFaq(index)"
+                                class="flex items-center justify-between w-full p-6 text-left cursor-pointer"
+                            >
+                                <span class="text-lg font-semibold font-display pr-8">{{ faq.question }}</span>
+                                <ChevronDown 
+                                    class="size-5 text-muted-foreground transition-transform duration-200 flex-shrink-0"
+                                    :class="{ 'rotate-180 text-primary': openFaqIndex === index }"
+                                />
+                            </button>
+                            <div 
+                                v-show="openFaqIndex === index"
+                                class="px-6 pb-6 text-muted-foreground leading-relaxed animate-fade-in-up"
+                            >
+                                {{ faq.answer }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- CTA Section -->
             <section id="cta" class="py-24 md:py-32 relative overflow-hidden">
                 <!-- Gradient background -->
-                <div class="absolute inset-0 bg-gradient-to-br from-primary via-primary to-orange-600 -z-10"></div>
+                <div class="absolute inset-0 bg-gradient-to-br from-primary to-orange-600 -z-10"></div>
                 <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnYtMmg0djJoMnY0aC0ydjJoLTR2LTJ6bTAtOGgtMnYtMmgydjJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30 -z-10"></div>
                 
                 <div class="container mx-auto px-4 md:px-6">
                     <div class="mx-auto max-w-4xl">
-                        <div class="text-center text-white">
-                            <!-- Emoji decoration -->
-                            <div class="flex justify-center gap-4 mb-8">
-                                <span class="text-4xl animate-bounce animation-delay-100">💰</span>
-                                <span class="text-4xl animate-bounce animation-delay-200">📊</span>
-                                <span class="text-4xl animate-bounce animation-delay-300">🚀</span>
-                            </div>
-                            
+                        <div class="text-center">
+                        
                             <h2 class="text-4xl md:text-6xl font-bold tracking-tight mb-6 font-display">
                                 Klar til at få indsigt i din løn?
                             </h2>
-                            <p class="text-xl opacity-90 mb-10 max-w-2xl mx-auto">
-                                Kom i gang gratis i dag. Ingen skjulte gebyrer, ingen binding – bare reel værdi.
+                            <p class="text-xl opacity-90 mb-10 max-w-2xl mx-auto text-muted-foreground">
+                                Vær med til at bygge Danmarks største lønstatistik baseret på verificerede lønsedler.
                             </p>
                             
                             <div class="flex flex-col items-center gap-8">
                                 <div class="flex flex-wrap justify-center gap-6">
-                                    <div class="flex items-center gap-2 text-white/90">
+                                    <div class="flex items-center gap-2 text-primary/90 font-bold">
                                         <CheckCircle2 class="size-5" />
                                         <span>100% gratis</span>
                                     </div>
-                                    <div class="flex items-center gap-2 text-white/90">
+                                    <div class="flex items-center gap-2 text-primary/90 font-bold">
                                         <CheckCircle2 class="size-5" />
                                         <span>Ingen kreditkort</span>
                                     </div>
-                                    <div class="flex items-center gap-2 text-white/90">
+                                    <div class="flex items-center gap-2 text-primary/90 font-bold">
                                         <CheckCircle2 class="size-5" />
                                         <span>Anonym analyse</span>
                                     </div>
                                 </div>
                                 
-                                <Button as-child size="lg" variant="secondary" class="text-base px-10 h-14 text-primary font-semibold shadow-2xl hover:scale-105 transition-transform">
+                                <Button as-child size="lg" class="text-base font-bold px-10 h-14 font-semibold shadow-2xl hover:scale-105 transition-transform">
                                     <Link :href="getStarted()">
                                         Kom i gang gratis
                                         <ArrowRight class="size-5 ml-2" />
